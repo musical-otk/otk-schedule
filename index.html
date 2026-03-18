@@ -11,37 +11,37 @@
   <style>
     /* ── 다크 ── */
     :root {
-      --bg1: #1a1a1a;
-      --bg2: #242424;
-      --bg3: #2e2e2e;
-      --border: #3c3c3c;
+      --bg1: #111118;
+      --bg2: #1a1a24;
+      --bg3: #22222e;
+      --border: #333340;
       --text1: #f0f0f0;
-      --text2: #a0a0a0;
-      --text3: #606060;
-      --roger: #7a9fd4;
-      --stone: #c4907a;
-      --attended: #6fba88;
-      --roger-bg: rgba(122,159,212,0.14);
-      --roger-bd: rgba(122,159,212,0.32);
-      --stone-bg: rgba(196,144,122,0.14);
-      --stone-bd: rgba(196,144,122,0.32);
+      --text2: #aaaaaa;
+      --text3: #666670;
+      --roger: #7aacff;
+      --stone: #f06070;
+      --attended: #44aa66;
+      --roger-bg: rgba(90,140,221,0.16);
+      --roger-bd: rgba(122,172,255,0.36);
+      --stone-bg: rgba(217,64,80,0.16);
+      --stone-bd: rgba(240,96,112,0.36);
     }
     /* ── 라이트 ── */
     body.light {
-      --bg1: #f2f2f2;
-      --bg2: #e8e8e8;
-      --bg3: #dcdcdc;
-      --border: #c8c8c8;
+      --bg1: #f8f8f6;
+      --bg2: #ffffff;
+      --bg3: #f0f0ee;
+      --border: #e0e0dc;
       --text1: #1a1a1a;
-      --text2: #555555;
-      --text3: #999999;
-      --roger: #4a6fa0;
-      --stone: #a05a40;
-      --attended: #3a8a58;
-      --roger-bg: rgba(74,111,160,0.10);
-      --roger-bd: rgba(74,111,160,0.28);
-      --stone-bg: rgba(160,90,64,0.10);
-      --stone-bd: rgba(160,90,64,0.28);
+      --text2: #555550;
+      --text3: #999990;
+      --roger: #2a5caa;
+      --stone: #B8182A;
+      --attended: #2a8a4a;
+      --roger-bg: rgba(42,92,170,0.08);
+      --roger-bd: rgba(42,92,170,0.28);
+      --stone-bg: rgba(184,24,42,0.08);
+      --stone-bd: rgba(184,24,42,0.28);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -136,10 +136,12 @@
 
     .attended-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--attended); margin-bottom: 2px; }
 
-    .badges { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; }
-    .badge  { font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 4px; line-height: 1.5; }
+    .badges { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; width: 100%; padding: 0 2px; }
+    .badge-row { display: flex; align-items: center; gap: 2px; }
+    .badge  { font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 4px; line-height: 1.5; flex-shrink: 0; }
     .badge.roger { background: var(--roger-bg); color: var(--roger); }
     .badge.stone { background: var(--stone-bg); color: var(--stone); }
+    .badge-chk { font-size: 9px; color: var(--text3); line-height: 1; }
 
     /* ── 로딩 ── */
     .loading { text-align: center; padding: 48px 16px; color: var(--text3); font-size: 13px; }
@@ -329,7 +331,7 @@
   function applyTheme(theme) {
     document.body.classList.toggle('light', theme === 'light');
     document.getElementById('theme-btn').textContent = theme === 'light' ? '🌙' : '☀️';
-    document.getElementById('meta-theme').content = theme === 'light' ? '#f2f2f2' : '#1a1a1a';
+    document.getElementById('meta-theme').content = theme === 'light' ? '#f8f8f6' : '#111118';
   }
   function toggleTheme() {
     const next = getTheme() === 'dark' ? 'light' : 'dark';
@@ -400,6 +402,7 @@
       const att     = !!attended[ds];
       const hasSch  = showR || showS;
       const isToday = ds === todayStr;
+      const isFuture = ds >= todayStr;
 
       const cls = ['cal-cell',
         hasSch      ? 'has-schedule' : '',
@@ -413,8 +416,8 @@
         <div class="date-wrap"><span class="date-num">${d}</span></div>
         ${att ? '<div class="attended-dot"></div>' : ''}
         ${hasSch ? `<div class="badges">
-          ${showR ? '<span class="badge roger">라져</span>' : ''}
-          ${showS ? '<span class="badge stone">스톤</span>' : ''}
+          ${showR ? `<div class="badge-row"><span class="badge roger">라져</span>${isFuture ? '<span class="badge-chk">□</span>' : ''}</div>` : ''}
+          ${showS ? `<div class="badge-row"><span class="badge stone">스톤</span>${isFuture ? '<span class="badge-chk">□</span>' : ''}</div>` : ''}
         </div>` : ''}
       </div>`;
     }
