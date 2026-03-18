@@ -3,288 +3,437 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>OTK 스케줄</title>
+  <title>관극 스케줄</title>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#13131f">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#1a1a1a" id="meta-theme">
   <style>
+    /* ── 다크 (기본) ── */
     :root {
-      --bg1: #13131f;
-      --bg2: #1c1c2e;
-      --bg3: #252540;
-      --border: #2e2e4e;
-      --text1: #f0f0f8;
-      --text2: #a0a0c0;
-      --text3: #606080;
-      --roger: #5b8dee;
-      --stone: #e8874a;
-      --radius: 12px;
+      --bg1: #1a1a1a;
+      --bg2: #242424;
+      --bg3: #2e2e2e;
+      --border: #3c3c3c;
+      --text1: #f0f0f0;
+      --text2: #a0a0a0;
+      --text3: #606060;
+      --roger: #7a9fd4;
+      --stone: #c4907a;
+      --attended: #6fba88;
+      --roger-bg: rgba(122,159,212,0.14);
+      --roger-bd: rgba(122,159,212,0.32);
+      --stone-bg: rgba(196,144,122,0.14);
+      --stone-bd: rgba(196,144,122,0.32);
     }
+    /* ── 라이트 ── */
+    body.light {
+      --bg1: #f2f2f2;
+      --bg2: #e8e8e8;
+      --bg3: #dcdcdc;
+      --border: #c8c8c8;
+      --text1: #1a1a1a;
+      --text2: #555555;
+      --text3: #999999;
+      --roger: #4a6fa0;
+      --stone: #a05a40;
+      --attended: #3a8a58;
+      --roger-bg: rgba(74,111,160,0.10);
+      --roger-bd: rgba(74,111,160,0.28);
+      --stone-bg: rgba(160,90,64,0.10);
+      --stone-bd: rgba(160,90,64,0.28);
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body {
       background: var(--bg1); color: var(--text1);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       min-height: 100dvh; max-width: 480px; margin: 0 auto;
+      transition: background 0.2s, color 0.2s;
     }
 
     /* ── 헤더 ── */
     .header {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 16px 16px 12px;
-      padding-top: calc(16px + env(safe-area-inset-top));
+      position: sticky; top: 0; z-index: 50;
+      background: var(--bg1); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 6px;
+      padding: 10px 14px;
+      padding-top: calc(10px + env(safe-area-inset-top));
+      transition: background 0.2s, border-color 0.2s;
     }
-    .header-title { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
-    .header-links { display: flex; gap: 6px; }
+    .header-title { font-size: 14px; font-weight: 700; flex: 1; cursor: pointer; }
+    .hbtn {
+      background: none; border: none; cursor: pointer; color: var(--text2);
+      font-size: 16px; padding: 5px 7px; border-radius: 8px; line-height: 1;
+      transition: background 0.15s;
+    }
+    .hbtn:active { background: var(--bg3); }
     .app-link {
-      padding: 6px 13px; border-radius: 20px; font-size: 12px; font-weight: 700;
-      text-decoration: none; cursor: pointer; transition: opacity 0.15s;
+      padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+      text-decoration: none; white-space: nowrap; transition: opacity 0.15s;
     }
-    .app-link:active { opacity: 0.7; }
-    .app-link.roger { background: rgba(91,141,238,0.15); color: var(--roger); border: 1px solid rgba(91,141,238,0.3); }
-    .app-link.stone { background: rgba(232,135,74,0.15); color: var(--stone); border: 1px solid rgba(232,135,74,0.3); }
+    .app-link:active { opacity: 0.65; }
+    .app-link.roger { background: var(--roger-bg); color: var(--roger); border: 1px solid var(--roger-bd); }
+    .app-link.stone { background: var(--stone-bg); color: var(--stone); border: 1px solid var(--stone-bd); }
 
     /* ── 월 네비 ── */
     .cal-nav {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 8px 16px 10px;
+      padding: 12px 14px 8px;
     }
-    .cal-nav-btn {
+    .nav-btn {
       background: none; border: none; color: var(--text2); font-size: 22px;
       cursor: pointer; padding: 4px 10px; border-radius: 8px;
-      transition: background 0.15s;
     }
-    .cal-nav-btn:active { background: var(--bg3); }
+    .nav-btn:active { background: var(--bg3); }
     .cal-month { font-size: 17px; font-weight: 700; }
 
     /* ── 달력 ── */
-    .cal-grid { padding: 0 10px 20px; }
-    .cal-dow { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 4px; }
-    .cal-dow-cell { text-align: center; font-size: 11px; color: var(--text3); padding: 4px 0; font-weight: 600; }
-    .cal-dow-cell:first-child { color: #d06060; }
-    .cal-dow-cell:last-child { color: #6080c0; }
+    .cal-grid { padding: 0 10px 24px; }
+    .cal-dow { display: grid; grid-template-columns: repeat(7,1fr); margin-bottom: 4px; }
+    .dow-cell { text-align: center; font-size: 11px; color: var(--text3); padding: 4px 0; font-weight: 600; }
+    .dow-cell:first-child { color: #c06060; }
+    .dow-cell:last-child  { color: var(--roger); }
 
-    .cal-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+    .cal-days { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
     .cal-cell {
       display: flex; flex-direction: column; align-items: center;
-      padding: 5px 2px 4px; border-radius: 8px; min-height: 46px;
+      padding: 5px 2px 4px; border-radius: 8px; min-height: 54px;
       cursor: default;
     }
-    .cal-cell.has-events { cursor: pointer; background: var(--bg2); }
-    .cal-cell.has-events:active { background: var(--bg3); }
-    .cal-cell.empty {}
-    .cal-date { font-size: 12px; color: var(--text2); font-weight: 500; line-height: 1; margin-bottom: 3px; }
-    .cal-cell.sunday .cal-date { color: #d06060; }
-    .cal-cell.saturday .cal-date { color: #6080c0; }
-    .cal-cell.today .cal-date-wrap {
-      background: var(--text1); color: var(--bg1);
-      border-radius: 50%; width: 22px; height: 22px;
-      display: flex; align-items: center; justify-content: center; font-weight: 700;
-    }
-    .cal-cell.today .cal-date { color: inherit; font-weight: 700; }
+    .cal-cell.has-schedule { background: var(--bg2); }
+    .cal-cell.clickable    { cursor: pointer; }
+    .cal-cell.clickable:active { background: var(--bg3); }
+
+    .date-wrap { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; }
+    .date-num  { font-size: 13px; color: var(--text2); font-weight: 500; line-height: 1; }
+    .cal-cell.sunday   .date-num { color: #c06060; }
+    .cal-cell.saturday .date-num { color: var(--roger); }
+    .cal-cell.today .date-wrap   { background: var(--text1); border-radius: 50%; }
+    .cal-cell.today .date-num    { color: var(--bg1); font-weight: 700; }
+
+    .attended-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--attended); margin-bottom: 2px; }
 
     .badges { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; }
-    .badge { font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 4px; line-height: 1.5; }
-    .badge.roger { background: rgba(91,141,238,0.18); color: var(--roger); }
-    .badge.stone { background: rgba(232,135,74,0.18); color: var(--stone); }
+    .badge  { font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 4px; line-height: 1.5; }
+    .badge.roger { background: var(--roger-bg); color: var(--roger); }
+    .badge.stone { background: var(--stone-bg); color: var(--stone); }
 
     /* ── 로딩 ── */
-    .loading { text-align: center; padding: 40px 16px; color: var(--text3); font-size: 13px; }
+    .loading { text-align: center; padding: 48px 16px; color: var(--text3); font-size: 13px; }
 
-    /* ── 오버레이 / 바텀시트 ── */
+    /* ── 오버레이 ── */
     .overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      position: fixed; inset: 0; background: rgba(0,0,0,0.48);
       display: flex; align-items: flex-end; z-index: 100;
       opacity: 0; pointer-events: none; transition: opacity 0.2s;
     }
     .overlay.open { opacity: 1; pointer-events: all; }
     .sheet {
       width: 100%; background: var(--bg2); border-radius: 20px 20px 0 0;
-      padding-bottom: calc(24px + env(safe-area-inset-bottom));
-      max-height: 75vh; overflow-y: auto;
-      transform: translateY(100%); transition: transform 0.25s cubic-bezier(.32,.72,0,1);
+      padding-bottom: calc(20px + env(safe-area-inset-bottom));
+      transform: translateY(100%); overflow-y: auto;
+      transition: background 0.2s, transform 0.26s cubic-bezier(.32,.72,0,1);
     }
     .overlay.open .sheet { transform: translateY(0); }
-    .sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 14px; }
-    .sheet-date { font-size: 14px; font-weight: 700; color: var(--text2); padding: 0 16px 12px; }
+    .sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 0; }
 
+    /* ── 날짜 상세 ── */
+    #sheet-detail { max-height: 70vh; }
+    .sheet-date { font-size: 14px; font-weight: 700; color: var(--text2); padding: 14px 16px 10px; }
     .session-row {
       display: flex; align-items: flex-start; gap: 12px;
-      padding: 13px 16px;
+      padding: 12px 16px; border-top: 1px solid var(--border);
+    }
+    .session-time { font-size: 14px; font-weight: 700; min-width: 46px; padding-top: 2px; }
+    .session-body { flex: 1; }
+    .session-tag {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      padding: 2px 7px; border-radius: 5px; margin-bottom: 4px; line-height: 1.5;
+    }
+    .session-tag.roger { background: var(--roger-bg); color: var(--roger); }
+    .session-tag.stone { background: var(--stone-bg); color: var(--stone); }
+    .session-cast { font-size: 14px; font-weight: 500; }
+    .session-attended { font-size: 11px; color: var(--attended); margin-top: 3px; }
+
+    /* ── 설정 ── */
+    #sheet-settings { max-height: 85vh; }
+    .settings-hd {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px 10px;
+    }
+    .settings-title { font-size: 15px; font-weight: 700; }
+    .settings-close {
+      background: none; border: none; color: var(--text2);
+      font-size: 18px; cursor: pointer; padding: 4px 6px; border-radius: 6px;
+    }
+    .settings-body { padding: 0 16px 8px; }
+    .section-title {
+      font-size: 11px; font-weight: 700; color: var(--text3);
+      letter-spacing: 0.4px; padding: 10px 0 8px;
       border-top: 1px solid var(--border);
     }
-    .session-time { font-size: 14px; font-weight: 700; color: var(--text1); min-width: 46px; padding-top: 1px; }
-    .session-body { flex: 1; }
-    .session-app {
-      display: inline-block; font-size: 10px; font-weight: 700;
-      padding: 2px 7px; border-radius: 5px; margin-bottom: 5px; line-height: 1.5;
+    .hint { font-size: 11px; color: var(--text3); padding-bottom: 10px; }
+    .actor-list { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 4px; }
+    .chip {
+      padding: 6px 13px; border-radius: 20px; font-size: 12px; font-weight: 600;
+      cursor: pointer; border: 1.5px solid var(--border);
+      background: var(--bg3); color: var(--text2);
+      transition: all 0.15s;
     }
-    .session-app.roger { background: rgba(91,141,238,0.18); color: var(--roger); }
-    .session-app.stone { background: rgba(232,135,74,0.18); color: var(--stone); }
-    .session-cast { font-size: 14px; color: var(--text1); font-weight: 500; line-height: 1.4; }
+    .chip.on.roger { background: var(--roger-bg); color: var(--roger); border-color: var(--roger-bd); }
+    .chip.on.stone { background: var(--stone-bg); color: var(--stone); border-color: var(--stone-bd); }
   </style>
 </head>
 <body>
 
   <div class="header">
-    <div class="header-title">📅 OTK 스케줄</div>
-    <div class="header-links">
-      <a class="app-link roger" href="https://musical-otk.github.io/roger2026/">✈ 라져</a>
-      <a class="app-link stone" href="https://musical-otk.github.io/stone2026_v2/">🪨 스톤</a>
-    </div>
+    <div class="header-title" onclick="goToToday()">관극 스케줄</div>
+    <button class="hbtn" id="theme-btn" onclick="toggleTheme()">☀️</button>
+    <button class="hbtn" onclick="openSettings()">⚙️</button>
+    <a class="app-link roger" href="https://musical-otk.github.io/roger2026/">✈ 라져</a>
+    <a class="app-link stone" href="https://musical-otk.github.io/stone2026_v2/">🪨 스톤</a>
   </div>
 
   <div class="cal-nav">
-    <button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+    <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
     <div class="cal-month" id="cal-month-label"></div>
-    <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+    <button class="nav-btn" onclick="changeMonth(1)">›</button>
   </div>
 
   <div class="cal-grid">
     <div class="cal-dow">
-      <div class="cal-dow-cell">일</div><div class="cal-dow-cell">월</div>
-      <div class="cal-dow-cell">화</div><div class="cal-dow-cell">수</div>
-      <div class="cal-dow-cell">목</div><div class="cal-dow-cell">금</div>
-      <div class="cal-dow-cell">토</div>
+      <div class="dow-cell">일</div><div class="dow-cell">월</div>
+      <div class="dow-cell">화</div><div class="dow-cell">수</div>
+      <div class="dow-cell">목</div><div class="dow-cell">금</div>
+      <div class="dow-cell">토</div>
     </div>
     <div class="cal-days" id="cal-days"></div>
   </div>
 
   <div id="status" class="loading">스케줄 불러오는 중…</div>
 
-  <!-- 바텀시트 -->
-  <div class="overlay" id="overlay" onclick="onOverlayClick(event)">
-    <div class="sheet" id="sheet">
+  <!-- 날짜 상세 -->
+  <div class="overlay" id="ov-detail" onclick="closeOnBg(event,'ov-detail')">
+    <div class="sheet" id="sheet-detail">
       <div class="sheet-handle"></div>
       <div class="sheet-date" id="sheet-date"></div>
       <div id="sheet-content"></div>
     </div>
   </div>
 
+  <!-- 설정 -->
+  <div class="overlay" id="ov-settings" onclick="closeOnBg(event,'ov-settings')">
+    <div class="sheet" id="sheet-settings">
+      <div class="sheet-handle"></div>
+      <div class="settings-hd">
+        <div class="settings-title">배우 필터</div>
+        <button class="settings-close" onclick="closeSettings()">✕</button>
+      </div>
+      <div class="settings-body">
+        <div class="hint">선택한 배우의 일정만 달력에 표시됩니다. 아무것도 선택 안 하면 전체 표시.</div>
+        <div class="section-title">✈ 라져</div>
+        <div class="actor-list" id="roger-actors"></div>
+        <div class="section-title" style="margin-top:10px;">🪨 스톤</div>
+        <div class="actor-list" id="stone-actors"></div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    const ROGER_URL = 'https://musical-otk.github.io/roger2026/schedule.json';
-    const STONE_URL = 'https://musical-otk.github.io/stone2026_v2/schedule.json';
-    const DOW = ['일','월','화','수','목','금','토'];
+    const ROGER_URL  = 'https://musical-otk.github.io/roger2026/schedule.json';
+    const STONE_URL  = 'https://musical-otk.github.io/stone2026_v2/schedule.json';
+    const DOW        = ['일','월','화','수','목','금','토'];
+    const PREFS_KEY  = 'hub_prefs';
+    const THEME_KEY  = 'hub_theme';
 
     let rogerSchedule = [];
     let stoneSchedule = [];
     let currentYear, currentMonth;
-
     const todayStr = new Date().toISOString().slice(0, 10);
 
-    async function init() {
-      const t = new Date();
-      currentYear  = t.getFullYear();
-      currentMonth = t.getMonth();
+    // ── 테마 ──
+    function getTheme() { return localStorage.getItem(THEME_KEY) || 'dark'; }
+    function applyTheme(theme) {
+      document.body.classList.toggle('light', theme === 'light');
+      document.getElementById('theme-btn').textContent = theme === 'light' ? '🌙' : '☀️';
+      document.getElementById('meta-theme').content = theme === 'light' ? '#f2f2f2' : '#1a1a1a';
+    }
+    function toggleTheme() {
+      const next = getTheme() === 'dark' ? 'light' : 'dark';
+      localStorage.setItem(THEME_KEY, next);
+      applyTheme(next);
+    }
 
+    // ── 설정 (배우 필터) ──
+    function getPrefs() {
+      try { return JSON.parse(localStorage.getItem(PREFS_KEY)) || { roger: [], stone: [] }; }
+      catch { return { roger: [], stone: [] }; }
+    }
+    function savePrefs(p) { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); }
+
+    // ── 관람 기록 ──
+    function getAttended() {
+      const map = {};
+      const load = (key, app) => {
+        try {
+          (JSON.parse(localStorage.getItem(key) || '[]')).forEach(r => {
+            if (!r.date) return;
+            (map[r.date] = map[r.date] || []).push({ app });
+          });
+        } catch {}
+      };
+      load('roger_records', 'roger');
+      load('stone_records', 'stone');
+      return map;
+    }
+
+    // ── 배우 목록 추출 ──
+    function extractActors(schedule) {
+      const s = new Set();
+      schedule.forEach(r => { [r.skylar, r.didi, r.role3].forEach(v => v && s.add(v)); });
+      return [...s].sort((a, b) => a.localeCompare(b, 'ko'));
+    }
+
+    function matchesFilter(session, selected) {
+      if (!selected.length) return true;
+      return [session.skylar, session.didi, session.role3].filter(Boolean).some(a => selected.includes(a));
+    }
+
+    // ── 달력 ──
+    function changeMonth(d) {
+      currentMonth += d;
+      if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+      if (currentMonth > 11) { currentMonth = 0;  currentYear++; }
+      renderCalendar();
+    }
+
+    function renderCalendar() {
+      document.getElementById('cal-month-label').textContent = `${currentYear}년 ${currentMonth + 1}월`;
+      const first   = new Date(currentYear, currentMonth, 1).getDay();
+      const days    = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const prefs   = getPrefs();
+      const attended = getAttended();
+      let html = '';
+
+      for (let i = 0; i < first; i++) html += '<div class="cal-cell"></div>';
+
+      for (let d = 1; d <= days; d++) {
+        const ds  = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const dow = (first + d - 1) % 7;
+        const rogerS  = rogerSchedule.filter(s => s.date === ds);
+        const stoneS  = stoneSchedule.filter(s => s.date === ds);
+        const showR   = rogerS.some(s => matchesFilter(s, prefs.roger));
+        const showS   = stoneS.some(s => matchesFilter(s, prefs.stone));
+        const att     = !!attended[ds];
+        const hasSch  = showR || showS;
+        const clickable = att || hasSch;
+        const isToday   = ds === todayStr;
+
+        const cls = ['cal-cell',
+          hasSch    ? 'has-schedule' : '',
+          clickable ? 'clickable'    : '',
+          dow === 0 ? 'sunday'       : '',
+          dow === 6 ? 'saturday'     : '',
+          isToday   ? 'today'        : '',
+        ].filter(Boolean).join(' ');
+
+        html += `<div class="${cls}" ${clickable ? `onclick="openDay('${ds}')"` : ''}>
+          <div class="date-wrap"><span class="date-num">${d}</span></div>
+          ${att ? '<div class="attended-dot"></div>' : ''}
+          ${(showR || showS) ? `<div class="badges">
+            ${showR ? '<span class="badge roger">라져</span>' : ''}
+            ${showS ? '<span class="badge stone">스톤</span>' : ''}
+          </div>` : ''}
+        </div>`;
+      }
+      document.getElementById('cal-days').innerHTML = html;
+    }
+
+    // ── 날짜 상세 ──
+    function openDay(ds) {
+      const attended = getAttended();
+      const d = new Date(ds + 'T00:00:00');
+      document.getElementById('sheet-date').textContent =
+        `${ds.slice(5).replace('-','.')}(${DOW[d.getDay()]})`;
+
+      const sessions = [
+        ...rogerSchedule.filter(s => s.date === ds).map(s => ({...s, app:'roger'})),
+        ...stoneSchedule.filter(s => s.date === ds).map(s => ({...s, app:'stone'})),
+      ].sort((a,b) => a.time.localeCompare(b.time));
+
+      const dayAtt = attended[ds] || [];
+      document.getElementById('sheet-content').innerHTML = sessions.map(s => {
+        const cast = s.app === 'stone'
+          ? [s.skylar, s.didi, s.role3].filter(Boolean).join(' · ')
+          : `${s.skylar} · ${s.didi}`;
+        const wasAtt = dayAtt.some(r => r.app === s.app);
+        return `<div class="session-row">
+          <div class="session-time">${s.time}</div>
+          <div class="session-body">
+            <span class="session-tag ${s.app}">${s.app === 'roger' ? '라져' : '스톤'}</span>
+            <div class="session-cast">${cast}</div>
+            ${wasAtt ? '<div class="session-attended">✓ 관람 기록 있음</div>' : ''}
+          </div>
+        </div>`;
+      }).join('') || '<div style="padding:16px;color:var(--text3);font-size:13px;">일정 없음</div>';
+
+      document.getElementById('ov-detail').classList.add('open');
+    }
+
+    // ── 설정 패널 ──
+    function openSettings() {
+      const prefs = getPrefs();
+      renderChips('roger-actors', extractActors(rogerSchedule), prefs.roger, 'roger');
+      renderChips('stone-actors', extractActors(stoneSchedule),  prefs.stone, 'stone');
+      document.getElementById('ov-settings').classList.add('open');
+    }
+    function closeSettings() {
+      document.getElementById('ov-settings').classList.remove('open');
+    }
+    function renderChips(id, actors, selected, app) {
+      document.getElementById(id).innerHTML = actors.map(a =>
+        `<button class="chip ${selected.includes(a) ? 'on '+app : ''}" onclick="toggleActor('${app}','${a}',this)">${a}</button>`
+      ).join('');
+    }
+    function toggleActor(app, name, el) {
+      const prefs = getPrefs();
+      const idx = prefs[app].indexOf(name);
+      if (idx === -1) prefs[app].push(name); else prefs[app].splice(idx, 1);
+      savePrefs(prefs);
+      el.classList.toggle('on');
+      el.classList.toggle(app, prefs[app].includes(name));
+      renderCalendar();
+    }
+
+    function goToToday() {
+      const t = new Date();
+      currentYear = t.getFullYear(); currentMonth = t.getMonth();
+      renderCalendar();
+    }
+
+    function closeOnBg(e, id) {
+      if (e.target === document.getElementById(id))
+        document.getElementById(id).classList.remove('open');
+    }
+
+    // ── 초기화 ──
+    async function init() {
+      applyTheme(getTheme());
+      const t = new Date();
+      currentYear = t.getFullYear(); currentMonth = t.getMonth();
       try {
         const [rRes, sRes] = await Promise.all([fetch(ROGER_URL), fetch(STONE_URL)]);
         rogerSchedule = await rRes.json();
         stoneSchedule = await sRes.json();
         document.getElementById('status').style.display = 'none';
         renderCalendar();
-      } catch(e) {
+      } catch {
         document.getElementById('status').textContent = '스케줄을 불러오지 못했습니다';
       }
     }
 
-    function changeMonth(delta) {
-      currentMonth += delta;
-      if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
-      if (currentMonth > 11) { currentMonth = 0;  currentYear++; }
-      renderCalendar();
-    }
-
-    function eventsFor(dateStr) {
-      return {
-        roger: rogerSchedule.filter(s => s.date === dateStr),
-        stone: stoneSchedule.filter(s => s.date === dateStr),
-      };
-    }
-
-    function renderCalendar() {
-      document.getElementById('cal-month-label').textContent =
-        `${currentYear}년 ${currentMonth + 1}월`;
-
-      const firstDow   = new Date(currentYear, currentMonth, 1).getDay();
-      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-
-      let html = '';
-      for (let i = 0; i < firstDow; i++) html += '<div class="cal-cell empty"></div>';
-
-      for (let d = 1; d <= daysInMonth; d++) {
-        const mm  = String(currentMonth + 1).padStart(2, '0');
-        const dd  = String(d).padStart(2, '0');
-        const ds  = `${currentYear}-${mm}-${dd}`;
-        const dow = (firstDow + d - 1) % 7;
-        const { roger, stone } = eventsFor(ds);
-        const hasEvents = roger.length > 0 || stone.length > 0;
-        const isToday   = ds === todayStr;
-
-        const cls = ['cal-cell',
-          hasEvents ? 'has-events' : '',
-          dow === 0 ? 'sunday' : '',
-          dow === 6 ? 'saturday' : '',
-          isToday   ? 'today'   : '',
-        ].filter(Boolean).join(' ');
-
-        const onclick = hasEvents ? `onclick="openDay('${ds}')"` : '';
-
-        const dateHtml = isToday
-          ? `<div class="cal-date-wrap"><span class="cal-date">${d}</span></div>`
-          : `<span class="cal-date">${d}</span>`;
-
-        const badges = [
-          roger.length ? `<span class="badge roger">라져</span>` : '',
-          stone.length ? `<span class="badge stone">스톤</span>` : '',
-        ].join('');
-
-        html += `<div class="${cls}" ${onclick}>
-          ${dateHtml}
-          ${badges ? `<div class="badges">${badges}</div>` : ''}
-        </div>`;
-      }
-      document.getElementById('cal-days').innerHTML = html;
-    }
-
-    function openDay(dateStr) {
-      const { roger, stone } = eventsFor(dateStr);
-      const d = new Date(dateStr + 'T00:00:00');
-      document.getElementById('sheet-date').textContent =
-        `${dateStr.slice(5).replace('-', '.')}(${DOW[d.getDay()]})`;
-
-      const sessions = [
-        ...roger.map(s => ({ ...s, app: 'roger' })),
-        ...stone.map(s => ({ ...s, app: 'stone' })),
-      ].sort((a, b) => a.time.localeCompare(b.time));
-
-      document.getElementById('sheet-content').innerHTML = sessions.map(s => {
-        const label = s.app === 'roger' ? '라져' : '스톤';
-        const cast  = s.app === 'stone'
-          ? [s.skylar, s.didi, s.role3].filter(Boolean).join(' · ')
-          : `${s.skylar} · ${s.didi}`;
-        return `<div class="session-row">
-          <div class="session-time">${s.time}</div>
-          <div class="session-body">
-            <span class="session-app ${s.app}">${label}</span>
-            <div class="session-cast">${cast}</div>
-          </div>
-        </div>`;
-      }).join('');
-
-      document.getElementById('overlay').classList.add('open');
-    }
-
-    function onOverlayClick(e) {
-      if (e.target === document.getElementById('overlay')) {
-        document.getElementById('overlay').classList.remove('open');
-      }
-    }
-
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/otk-schedule/sw.js');
-    }
-
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/otk-schedule/sw.js');
     init();
   </script>
 </body>

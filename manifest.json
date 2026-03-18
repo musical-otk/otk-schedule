@@ -1,6 +1,6 @@
 {
-  "name": "OTK 스케줄",
-  "short_name": "OTK",
+  "name": "관극 스케줄",
+  "short_name": "관극",
   "start_url": "/otk-schedule/",
   "display": "standalone",
   "background_color": "#13131f",
