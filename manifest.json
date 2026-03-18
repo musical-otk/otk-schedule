@@ -1,0 +1,12 @@
+{
+  "name": "OTK 스케줄",
+  "short_name": "OTK",
+  "start_url": "/otk-schedule/",
+  "display": "standalone",
+  "background_color": "#13131f",
+  "theme_color": "#13131f",
+  "icons": [
+    { "src": "/otk-schedule/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/otk-schedule/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

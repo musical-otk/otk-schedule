@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>OTK 스케줄</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#13131f">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <style>
+    :root {
+      --bg1: #13131f;
+      --bg2: #1c1c2e;
+      --bg3: #252540;
+      --border: #2e2e4e;
+      --text1: #f0f0f8;
+      --text2: #a0a0c0;
+      --text3: #606080;
+      --roger: #5b8dee;
+      --stone: #e8874a;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body {
+      background: var(--bg1); color: var(--text1);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100dvh; max-width: 480px; margin: 0 auto;
+    }
+
+    /* ── 헤더 ── */
+    .header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 16px 12px;
+      padding-top: calc(16px + env(safe-area-inset-top));
+    }
+    .header-title { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+    .header-links { display: flex; gap: 6px; }
+    .app-link {
+      padding: 6px 13px; border-radius: 20px; font-size: 12px; font-weight: 700;
+      text-decoration: none; cursor: pointer; transition: opacity 0.15s;
+    }
+    .app-link:active { opacity: 0.7; }
+    .app-link.roger { background: rgba(91,141,238,0.15); color: var(--roger); border: 1px solid rgba(91,141,238,0.3); }
+    .app-link.stone { background: rgba(232,135,74,0.15); color: var(--stone); border: 1px solid rgba(232,135,74,0.3); }
+
+    /* ── 월 네비 ── */
+    .cal-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 16px 10px;
+    }
+    .cal-nav-btn {
+      background: none; border: none; color: var(--text2); font-size: 22px;
+      cursor: pointer; padding: 4px 10px; border-radius: 8px;
+      transition: background 0.15s;
+    }
+    .cal-nav-btn:active { background: var(--bg3); }
+    .cal-month { font-size: 17px; font-weight: 700; }
+
+    /* ── 달력 ── */
+    .cal-grid { padding: 0 10px 20px; }
+    .cal-dow { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 4px; }
+    .cal-dow-cell { text-align: center; font-size: 11px; color: var(--text3); padding: 4px 0; font-weight: 600; }
+    .cal-dow-cell:first-child { color: #d06060; }
+    .cal-dow-cell:last-child { color: #6080c0; }
+
+    .cal-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+    .cal-cell {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 5px 2px 4px; border-radius: 8px; min-height: 46px;
+      cursor: default;
+    }
+    .cal-cell.has-events { cursor: pointer; background: var(--bg2); }
+    .cal-cell.has-events:active { background: var(--bg3); }
+    .cal-cell.empty {}
+    .cal-date { font-size: 12px; color: var(--text2); font-weight: 500; line-height: 1; margin-bottom: 3px; }
+    .cal-cell.sunday .cal-date { color: #d06060; }
+    .cal-cell.saturday .cal-date { color: #6080c0; }
+    .cal-cell.today .cal-date-wrap {
+      background: var(--text1); color: var(--bg1);
+      border-radius: 50%; width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center; font-weight: 700;
+    }
+    .cal-cell.today .cal-date { color: inherit; font-weight: 700; }
+
+    .badges { display: flex; flex-wrap: wrap; gap: 2px; justify-content: center; }
+    .badge { font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 4px; line-height: 1.5; }
+    .badge.roger { background: rgba(91,141,238,0.18); color: var(--roger); }
+    .badge.stone { background: rgba(232,135,74,0.18); color: var(--stone); }
+
+    /* ── 로딩 ── */
+    .loading { text-align: center; padding: 40px 16px; color: var(--text3); font-size: 13px; }
+
+    /* ── 오버레이 / 바텀시트 ── */
+    .overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+      display: flex; align-items: flex-end; z-index: 100;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .overlay.open { opacity: 1; pointer-events: all; }
+    .sheet {
+      width: 100%; background: var(--bg2); border-radius: 20px 20px 0 0;
+      padding-bottom: calc(24px + env(safe-area-inset-bottom));
+      max-height: 75vh; overflow-y: auto;
+      transform: translateY(100%); transition: transform 0.25s cubic-bezier(.32,.72,0,1);
+    }
+    .overlay.open .sheet { transform: translateY(0); }
+    .sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 14px; }
+    .sheet-date { font-size: 14px; font-weight: 700; color: var(--text2); padding: 0 16px 12px; }
+
+    .session-row {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 13px 16px;
+      border-top: 1px solid var(--border);
+    }
+    .session-time { font-size: 14px; font-weight: 700; color: var(--text1); min-width: 46px; padding-top: 1px; }
+    .session-body { flex: 1; }
+    .session-app {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      padding: 2px 7px; border-radius: 5px; margin-bottom: 5px; line-height: 1.5;
+    }
+    .session-app.roger { background: rgba(91,141,238,0.18); color: var(--roger); }
+    .session-app.stone { background: rgba(232,135,74,0.18); color: var(--stone); }
+    .session-cast { font-size: 14px; color: var(--text1); font-weight: 500; line-height: 1.4; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-title">📅 OTK 스케줄</div>
+    <div class="header-links">
+      <a class="app-link roger" href="https://musical-otk.github.io/roger2026/">✈ 라져</a>
+      <a class="app-link stone" href="https://musical-otk.github.io/stone2026_v2/">🪨 스톤</a>
+    </div>
+  </div>
+
+  <div class="cal-nav">
+    <button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+    <div class="cal-month" id="cal-month-label"></div>
+    <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+  </div>
+
+  <div class="cal-grid">
+    <div class="cal-dow">
+      <div class="cal-dow-cell">일</div><div class="cal-dow-cell">월</div>
+      <div class="cal-dow-cell">화</div><div class="cal-dow-cell">수</div>
+      <div class="cal-dow-cell">목</div><div class="cal-dow-cell">금</div>
+      <div class="cal-dow-cell">토</div>
+    </div>
+    <div class="cal-days" id="cal-days"></div>
+  </div>
+
+  <div id="status" class="loading">스케줄 불러오는 중…</div>
+
+  <!-- 바텀시트 -->
+  <div class="overlay" id="overlay" onclick="onOverlayClick(event)">
+    <div class="sheet" id="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-date" id="sheet-date"></div>
+      <div id="sheet-content"></div>
+    </div>
+  </div>
+
+  <script>
+    const ROGER_URL = 'https://musical-otk.github.io/roger2026/schedule.json';
+    const STONE_URL = 'https://musical-otk.github.io/stone2026_v2/schedule.json';
+    const DOW = ['일','월','화','수','목','금','토'];
+
+    let rogerSchedule = [];
+    let stoneSchedule = [];
+    let currentYear, currentMonth;
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    async function init() {
+      const t = new Date();
+      currentYear  = t.getFullYear();
+      currentMonth = t.getMonth();
+
+      try {
+        const [rRes, sRes] = await Promise.all([fetch(ROGER_URL), fetch(STONE_URL)]);
+        rogerSchedule = await rRes.json();
+        stoneSchedule = await sRes.json();
+        document.getElementById('status').style.display = 'none';
+        renderCalendar();
+      } catch(e) {
+        document.getElementById('status').textContent = '스케줄을 불러오지 못했습니다';
+      }
+    }
+
+    function changeMonth(delta) {
+      currentMonth += delta;
+      if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
+      if (currentMonth > 11) { currentMonth = 0;  currentYear++; }
+      renderCalendar();
+    }
+
+    function eventsFor(dateStr) {
+      return {
+        roger: rogerSchedule.filter(s => s.date === dateStr),
+        stone: stoneSchedule.filter(s => s.date === dateStr),
+      };
+    }
+
+    function renderCalendar() {
+      document.getElementById('cal-month-label').textContent =
+        `${currentYear}년 ${currentMonth + 1}월`;
+
+      const firstDow   = new Date(currentYear, currentMonth, 1).getDay();
+      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+
+      let html = '';
+      for (let i = 0; i < firstDow; i++) html += '<div class="cal-cell empty"></div>';
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const mm  = String(currentMonth + 1).padStart(2, '0');
+        const dd  = String(d).padStart(2, '0');
+        const ds  = `${currentYear}-${mm}-${dd}`;
+        const dow = (firstDow + d - 1) % 7;
+        const { roger, stone } = eventsFor(ds);
+        const hasEvents = roger.length > 0 || stone.length > 0;
+        const isToday   = ds === todayStr;
+
+        const cls = ['cal-cell',
+          hasEvents ? 'has-events' : '',
+          dow === 0 ? 'sunday' : '',
+          dow === 6 ? 'saturday' : '',
+          isToday   ? 'today'   : '',
+        ].filter(Boolean).join(' ');
+
+        const onclick = hasEvents ? `onclick="openDay('${ds}')"` : '';
+
+        const dateHtml = isToday
+          ? `<div class="cal-date-wrap"><span class="cal-date">${d}</span></div>`
+          : `<span class="cal-date">${d}</span>`;
+
+        const badges = [
+          roger.length ? `<span class="badge roger">라져</span>` : '',
+          stone.length ? `<span class="badge stone">스톤</span>` : '',
+        ].join('');
+
+        html += `<div class="${cls}" ${onclick}>
+          ${dateHtml}
+          ${badges ? `<div class="badges">${badges}</div>` : ''}
+        </div>`;
+      }
+      document.getElementById('cal-days').innerHTML = html;
+    }
+
+    function openDay(dateStr) {
+      const { roger, stone } = eventsFor(dateStr);
+      const d = new Date(dateStr + 'T00:00:00');
+      document.getElementById('sheet-date').textContent =
+        `${dateStr.slice(5).replace('-', '.')}(${DOW[d.getDay()]})`;
+
+      const sessions = [
+        ...roger.map(s => ({ ...s, app: 'roger' })),
+        ...stone.map(s => ({ ...s, app: 'stone' })),
+      ].sort((a, b) => a.time.localeCompare(b.time));
+
+      document.getElementById('sheet-content').innerHTML = sessions.map(s => {
+        const label = s.app === 'roger' ? '라져' : '스톤';
+        const cast  = s.app === 'stone'
+          ? [s.skylar, s.didi, s.role3].filter(Boolean).join(' · ')
+          : `${s.skylar} · ${s.didi}`;
+        return `<div class="session-row">
+          <div class="session-time">${s.time}</div>
+          <div class="session-body">
+            <span class="session-app ${s.app}">${label}</span>
+            <div class="session-cast">${cast}</div>
+          </div>
+        </div>`;
+      }).join('');
+
+      document.getElementById('overlay').classList.add('open');
+    }
+
+    function onOverlayClick(e) {
+      if (e.target === document.getElementById('overlay')) {
+        document.getElementById('overlay').classList.remove('open');
+      }
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/otk-schedule/sw.js');
+    }
+
+    init();
+  </script>
+</body>
+</html>
