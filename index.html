@@ -21,10 +21,13 @@
       --roger: #7aacff;
       --stone: #f06070;
       --attended: #44aa66;
+      --custom: #a78bfa;
       --roger-bg: rgba(90,140,221,0.16);
       --roger-bd: rgba(122,172,255,0.36);
       --stone-bg: rgba(217,64,80,0.16);
       --stone-bd: rgba(240,96,112,0.36);
+      --custom-bg: rgba(167,139,250,0.16);
+      --custom-bd: rgba(167,139,250,0.36);
     }
     /* ── 라이트 ── */
     body.light {
@@ -38,10 +41,13 @@
       --roger: #2a5caa;
       --stone: #B8182A;
       --attended: #2a8a4a;
+      --custom: #7c3aed;
       --roger-bg: rgba(42,92,170,0.08);
       --roger-bd: rgba(42,92,170,0.28);
       --stone-bg: rgba(184,24,42,0.08);
       --stone-bd: rgba(184,24,42,0.28);
+      --custom-bg: rgba(124,58,237,0.08);
+      --custom-bd: rgba(124,58,237,0.28);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -139,9 +145,22 @@
     .badges { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; width: 100%; padding: 0 2px; }
     .badge-row { display: flex; align-items: center; gap: 2px; }
     .badge  { font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 4px; line-height: 1.5; flex-shrink: 0; }
-    .badge.roger { background: var(--roger-bg); color: var(--roger); }
-    .badge.stone { background: var(--stone-bg); color: var(--stone); }
+    .badge.roger  { background: var(--roger-bg);  color: var(--roger); }
+    .badge.stone  { background: var(--stone-bg);  color: var(--stone); }
+    .badge.custom { background: var(--custom-bg); color: var(--custom); }
     .badge-chk { font-size: 9px; color: var(--text3); line-height: 1; }
+
+    /* ── FAB ── */
+    .fab {
+      position: sticky; bottom: 20px; float: right; right: 16px;
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--custom); color: #fff;
+      border: none; font-size: 22px; cursor: pointer; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 3px 14px rgba(0,0,0,0.35); margin: -54px 16px 20px auto;
+      flex-shrink: 0;
+    }
+    .fab:active { opacity: 0.8; }
 
     /* ── 로딩 ── */
     .loading { text-align: center; padding: 48px 16px; color: var(--text3); font-size: 13px; }
@@ -176,8 +195,9 @@
       display: inline-block; font-size: 10px; font-weight: 700;
       padding: 2px 7px; border-radius: 5px; margin-bottom: 4px; line-height: 1.5;
     }
-    .session-tag.roger { background: var(--roger-bg); color: var(--roger); }
-    .session-tag.stone { background: var(--stone-bg); color: var(--stone); }
+    .session-tag.roger  { background: var(--roger-bg);  color: var(--roger); }
+    .session-tag.stone  { background: var(--stone-bg);  color: var(--stone); }
+    .session-tag.custom { background: var(--custom-bg); color: var(--custom); }
     .session-cast { font-size: 14px; font-weight: 500; }
     .session-meta { font-size: 11px; color: var(--text3); margin-top: 3px; }
     .session-attended { font-size: 11px; color: var(--attended); }
@@ -208,6 +228,37 @@
     }
     .chip.on.roger { background: var(--roger-bg); color: var(--roger); border-color: var(--roger-bd); }
     .chip.on.stone { background: var(--stone-bg); color: var(--stone); border-color: var(--stone-bd); }
+
+    /* ── 상세 헤더 ── */
+    .sheet-date-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; }
+    .sheet-date { font-size: 14px; font-weight: 700; color: var(--text2); }
+    .sheet-add-btn {
+      background: var(--custom-bg); color: var(--custom); border: 1px solid var(--custom-bd);
+      border-radius: 16px; font-size: 11px; font-weight: 700;
+      padding: 4px 10px; cursor: pointer;
+    }
+    /* ── 커스텀 이벤트 액션 ── */
+    .session-act-btn {
+      background: none; border: none; color: var(--text3); font-size: 12px;
+      cursor: pointer; padding: 2px 6px; border-radius: 4px;
+    }
+    .session-act-btn:active { background: var(--bg3); }
+    /* ── 커스텀 폼 ── */
+    #sheet-custom { max-height: 90vh; }
+    .custom-hd { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; }
+    .custom-title { font-size: 15px; font-weight: 700; }
+    .custom-close { background: none; border: none; color: var(--text2); font-size: 18px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+    .form-row { padding: 8px 16px; }
+    .form-label { font-size: 11px; color: var(--text3); font-weight: 700; margin-bottom: 5px; }
+    .form-input {
+      width: 100%; background: var(--bg3); border: 1px solid var(--border);
+      border-radius: 8px; padding: 9px 12px; color: var(--text1);
+      font-size: 14px; font-family: inherit;
+    }
+    .form-input:focus { outline: none; border-color: var(--custom-bd); }
+    .form-actions { display: flex; gap: 8px; padding: 16px; }
+    .btn-primary { flex: 1; background: var(--custom); color: #fff; border: none; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .btn-cancel  { padding: 12px 18px; background: var(--bg3); border: none; border-radius: 10px; color: var(--text2); font-size: 14px; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -238,6 +289,7 @@
       <div class="cal-days" id="cal-days"></div>
     </div>
     <div id="status" class="loading">스케줄 불러오는 중…</div>
+    <button class="fab" onclick="openCustomForm('')">+</button>
   </div>
 
   <!-- 앱 iframe -->
@@ -250,8 +302,42 @@
 <div class="overlay" id="ov-detail" onclick="closeOnBg(event,'ov-detail')">
   <div class="sheet" id="sheet-detail">
     <div class="sheet-handle"></div>
-    <div class="sheet-date" id="sheet-date"></div>
+    <div class="sheet-date-row">
+      <div class="sheet-date" id="sheet-date"></div>
+      <button class="sheet-add-btn" id="sheet-add-btn" onclick="openCustomFormForDay()">+ 기타 추가</button>
+    </div>
     <div id="sheet-content"></div>
+  </div>
+</div>
+
+<!-- 커스텀 이벤트 폼 -->
+<div class="overlay" id="ov-custom" onclick="closeOnBg(event,'ov-custom')">
+  <div class="sheet" id="sheet-custom">
+    <div class="sheet-handle"></div>
+    <div class="custom-hd">
+      <div class="custom-title" id="custom-form-title">기타 일정 추가</div>
+      <button class="custom-close" onclick="closeCustomForm()">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-label">날짜</div>
+      <input class="form-input" type="date" id="cf-date">
+    </div>
+    <div class="form-row">
+      <div class="form-label">시간 (선택)</div>
+      <input class="form-input" type="time" id="cf-time" placeholder="예: 14:00">
+    </div>
+    <div class="form-row">
+      <div class="form-label">공연명</div>
+      <input class="form-input" type="text" id="cf-name" placeholder="공연 이름">
+    </div>
+    <div class="form-row">
+      <div class="form-label">메모 (선택)</div>
+      <input class="form-input" type="text" id="cf-comment" placeholder="메모">
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeCustomForm()">취소</button>
+      <button class="btn-primary" onclick="saveCustomEvent()">저장</button>
+    </div>
   </div>
 </div>
 
@@ -279,8 +365,9 @@
   const ROGER_APP = 'https://musical-otk.github.io/roger2026/';
   const STONE_APP = 'https://musical-otk.github.io/stone2026_v2/';
   const DOW       = ['일','월','화','수','목','금','토'];
-  const PREFS_KEY = 'hub_prefs';
-  const THEME_KEY = 'hub_theme';
+  const PREFS_KEY  = 'hub_prefs';
+  const THEME_KEY  = 'hub_theme';
+  const CUSTOM_KEY = 'hub_custom';
 
   let rogerSchedule = [], stoneSchedule = [];
   let currentYear, currentMonth;
@@ -346,6 +433,57 @@
   }
   function savePrefs(p) { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); }
 
+  // ── 커스텀 이벤트 ──
+  function getCustom() {
+    try { return JSON.parse(localStorage.getItem(CUSTOM_KEY)) || []; } catch { return []; }
+  }
+  function saveCustom(list) { localStorage.setItem(CUSTOM_KEY, JSON.stringify(list)); }
+
+  let _customEditId = null;
+  let _customFormDs = '';
+
+  function openCustomForm(ds, editId) {
+    _customEditId = editId || null;
+    _customFormDs = ds || todayStr;
+    const ev = editId ? getCustom().find(e => e.id === editId) : null;
+    document.getElementById('custom-form-title').textContent = ev ? '기타 일정 수정' : '기타 일정 추가';
+    document.getElementById('cf-date').value    = ev ? ev.date    : _customFormDs;
+    document.getElementById('cf-time').value    = ev ? ev.time    : '';
+    document.getElementById('cf-name').value    = ev ? ev.name    : '';
+    document.getElementById('cf-comment').value = ev ? ev.comment : '';
+    document.getElementById('ov-detail').classList.remove('open');
+    document.getElementById('ov-custom').classList.add('open');
+  }
+  function openCustomFormForDay() {
+    openCustomForm(_customFormDs);
+  }
+  function closeCustomForm() {
+    document.getElementById('ov-custom').classList.remove('open');
+  }
+  function saveCustomEvent() {
+    const date    = document.getElementById('cf-date').value;
+    const name    = document.getElementById('cf-name').value.trim();
+    if (!date || !name) { alert('날짜와 공연명을 입력해주세요'); return; }
+    const time    = document.getElementById('cf-time').value;
+    const comment = document.getElementById('cf-comment').value.trim();
+    const list = getCustom();
+    if (_customEditId) {
+      const idx = list.findIndex(e => e.id === _customEditId);
+      if (idx !== -1) list[idx] = { id: _customEditId, date, time, name, comment };
+    } else {
+      list.push({ id: Date.now(), date, time, name, comment });
+    }
+    saveCustom(list);
+    closeCustomForm();
+    renderCalendar();
+  }
+  function deleteCustomEvent(id) {
+    if (!confirm('삭제하시겠습니까?')) return;
+    saveCustom(getCustom().filter(e => e.id !== id));
+    document.getElementById('ov-detail').classList.remove('open');
+    renderCalendar();
+  }
+
   // ── 관람 기록 ──
   function getAttended() {
     const map = {};
@@ -390,6 +528,7 @@
     const days     = new Date(currentYear, currentMonth + 1, 0).getDate();
     const prefs    = getPrefs();
     const attended = getAttended();
+    const custom   = getCustom();
     let html = '';
 
     for (let i = 0; i < first; i++) html += '<div class="cal-cell"></div>';
@@ -399,8 +538,9 @@
       const dow = (first + d - 1) % 7;
       const showR   = rogerSchedule.filter(s => s.date === ds).some(s => matchesFilter(s, prefs.roger));
       const showS   = stoneSchedule.filter(s => s.date === ds).some(s => matchesFilter(s, prefs.stone));
+      const showC   = custom.filter(e => e.date === ds);
       const att     = !!attended[ds];
-      const hasSch  = showR || showS;
+      const hasSch  = showR || showS || showC.length > 0;
       const isToday = ds === todayStr;
       const isFuture = ds >= todayStr;
 
@@ -418,6 +558,7 @@
         ${hasSch ? `<div class="badges">
           ${showR ? `<div class="badge-row"><span class="badge roger">라져</span>${isFuture ? '<span class="badge-chk">□</span>' : ''}</div>` : ''}
           ${showS ? `<div class="badge-row"><span class="badge stone">스톤</span>${isFuture ? '<span class="badge-chk">□</span>' : ''}</div>` : ''}
+          ${showC.map(e => `<div class="badge-row"><span class="badge custom" title="${e.name}">${e.name.length > 3 ? e.name.slice(0,3)+'…' : e.name}</span>${isFuture ? '<span class="badge-chk">□</span>' : ''}</div>`).join('')}
         </div>` : ''}
       </div>`;
     }
@@ -426,6 +567,7 @@
 
   // ── 날짜 상세 ──
   function openDay(ds) {
+    _customFormDs = ds;
     const attended = getAttended();
     const d = new Date(ds + 'T00:00:00');
     document.getElementById('sheet-date').textContent =
@@ -437,17 +579,17 @@
       ...stoneSchedule.filter(s => s.date === ds && matchesFilter(s, prefs.stone)).map(s => ({...s, app:'stone'})),
     ].sort((a,b) => a.time.localeCompare(b.time));
 
-    const dayAtt = attended[ds] || [];
+    const dayAtt  = attended[ds] || [];
+    const customs = getCustom().filter(e => e.date === ds)
+      .sort((a,b) => (a.time||'').localeCompare(b.time||''));
 
-    document.getElementById('sheet-content').innerHTML = sessions.map(s => {
+    const regularHtml = sessions.map(s => {
       const cast   = s.app === 'stone'
         ? [s.skylar, s.didi, s.role3].filter(Boolean).join(' · ')
         : `${s.skylar} · ${s.didi}`;
       const attRec = dayAtt.find(r => r.app === s.app && (!r.time || r.time === s.time));
       const seat   = attRec?.seatZone
-        ? [attRec.seatZone ? attRec.seatZone + '구역' : '',
-           attRec.seatRow  ? attRec.seatRow  + '열'   : '',
-           attRec.seatNumber ? attRec.seatNumber + '번' : '']
+        ? [attRec.seatZone + '구역', attRec.seatRow + '열', attRec.seatNumber + '번']
             .filter(Boolean).join(' ')
         : '';
       return `<div class="session-row">
@@ -460,7 +602,24 @@
           </div>` : ''}
         </div>
       </div>`;
-    }).join('') || '<div style="padding:16px;color:var(--text3);font-size:13px;">일정 없음</div>';
+    }).join('');
+
+    const customHtml = customs.map(e => `
+      <div class="session-row">
+        <div class="session-time">${e.time || '—'}</div>
+        <div class="session-body">
+          <span class="session-tag custom">기타</span>
+          <div class="session-cast">${e.name}</div>
+          ${e.comment ? `<div class="session-meta">${e.comment}</div>` : ''}
+          <div>
+            <button class="session-act-btn" onclick="openCustomForm('${ds}',${e.id})">✏️ 수정</button>
+            <button class="session-act-btn" onclick="deleteCustomEvent(${e.id})">🗑️ 삭제</button>
+          </div>
+        </div>
+      </div>`).join('');
+
+    document.getElementById('sheet-content').innerHTML =
+      (regularHtml + customHtml) || '<div style="padding:16px;color:var(--text3);font-size:13px;">일정 없음</div>';
 
     document.getElementById('ov-detail').classList.add('open');
   }
