@@ -431,9 +431,10 @@
     document.getElementById('sheet-date').textContent =
       `${ds.slice(5).replace('-','.')}(${DOW[d.getDay()]})`;
 
+    const prefs = getPrefs();
     const sessions = [
-      ...rogerSchedule.filter(s => s.date === ds).map(s => ({...s, app:'roger'})),
-      ...stoneSchedule.filter(s => s.date === ds).map(s => ({...s, app:'stone'})),
+      ...rogerSchedule.filter(s => s.date === ds && matchesFilter(s, prefs.roger)).map(s => ({...s, app:'roger'})),
+      ...stoneSchedule.filter(s => s.date === ds && matchesFilter(s, prefs.stone)).map(s => ({...s, app:'stone'})),
     ].sort((a,b) => a.time.localeCompare(b.time));
 
     const dayAtt = attended[ds] || [];
