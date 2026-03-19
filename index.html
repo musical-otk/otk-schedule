@@ -240,9 +240,10 @@
       padding: 4px 10px; cursor: pointer;
     }
     /* ── 커스텀 이벤트 액션 ── */
+    .session-acts { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; flex-shrink: 0; padding-top: 2px; }
     .session-act-btn {
-      background: none; border: none; color: var(--text3); font-size: 12px;
-      cursor: pointer; padding: 2px 6px; border-radius: 4px;
+      background: none; border: none; color: var(--text3); font-size: 15px;
+      cursor: pointer; padding: 3px 5px; border-radius: 6px; line-height: 1;
     }
     .session-act-btn:active { background: var(--bg3); }
     /* ── 커스텀 폼 ── */
@@ -496,7 +497,7 @@
     const ev = editId ? getCustom().find(e => e.id === editId) : null;
     document.getElementById('custom-form-title').textContent = ev ? '기타 일정 수정' : '기타 일정 추가';
     document.getElementById('cf-date').value    = ev ? ev.date    : _customFormDs;
-    document.getElementById('cf-time').value    = ev ? ev.time    : '';
+    document.getElementById('cf-time').value    = ev ? ev.time    : '20:00';
     document.getElementById('cf-name').value    = ev ? ev.name    : '';
     document.getElementById('cf-comment').value = ev ? ev.comment : '';
     renderColorPicker(ev ? ev.color : COLOR_PALETTE[0]);
@@ -614,7 +615,7 @@
 
       const sessBadges = allSess.map(s => {
         const isAtt = dayAtt.some(r => r.app === s.app && (!r.time || r.time === s.time));
-        const chk   = isAtt ? '✅' : (isFuture ? '□' : '');
+        const chk   = isAtt ? '✅' : '';
         const label = s.app === 'roger' ? '라져' : '스톤';
         return `<div class="badge-row">
           <span class="att-chk">${chk}</span>
@@ -623,7 +624,7 @@
         </div>`;
       }).join('');
       const customBadges = showC.map(e => {
-        const chk = isFuture ? '□' : '';
+        const chk = '✅';
         const col = e.color || COLOR_PALETTE[0];
         const bg  = hexToRgba(col, 0.16);
         const bd  = hexToRgba(col, 0.36);
@@ -692,10 +693,10 @@
           <span class="session-tag" style="background:${bg};color:${col};border:1px solid ${bd}">기타</span>
           <div class="session-cast">${e.name}</div>
           ${e.comment ? `<div class="session-meta">${e.comment}</div>` : ''}
-          <div>
-            <button class="session-act-btn" onclick="openCustomForm('${ds}',${e.id})">✏️ 수정</button>
-            <button class="session-act-btn" onclick="deleteCustomEvent(${e.id})">🗑️ 삭제</button>
-          </div>
+        </div>
+        <div class="session-acts">
+          <button class="session-act-btn" onclick="openCustomForm('${ds}',${e.id})">✏️</button>
+          <button class="session-act-btn" onclick="deleteCustomEvent(${e.id})">🗑️</button>
         </div>
       </div>`;
     }).join('');
