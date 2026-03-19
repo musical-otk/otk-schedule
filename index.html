@@ -149,7 +149,7 @@
     .badge.stone  { background: var(--stone-bg);  color: var(--stone); }
     .badge.custom { background: var(--custom-bg); color: var(--custom); }
     .badge-time { font-size: 8px; color: var(--text2); white-space: nowrap; }
-    .att-chk { font-size: 8px; line-height: 1; flex-shrink: 0; }
+    .att-chk { font-size: 8px; line-height: 1; flex-shrink: 0; min-width: 11px; text-align: center; }
 
     /* ── FAB ── */
     .fab {
@@ -553,6 +553,7 @@
       const showC    = custom.filter(e => e.date === ds);
       const hasSch   = allSess.length > 0 || showC.length > 0;
       const isToday  = ds === todayStr;
+      const isFuture = ds >= todayStr;
 
       const cls = ['cal-cell',
         hasSch      ? 'has-schedule' : '',
@@ -564,16 +565,21 @@
 
       const sessBadges = allSess.map(s => {
         const isAtt = dayAtt.some(r => r.app === s.app && (!r.time || r.time === s.time));
+        const chk   = isAtt ? '✅' : (isFuture ? '□' : '');
         const label = s.app === 'roger' ? '라져' : '스톤';
         return `<div class="badge-row">
-          ${isAtt ? '<span class="att-chk">✅</span>' : ''}
+          <span class="att-chk">${chk}</span>
           <span class="badge ${s.app}">${label}</span>
           <span class="badge-time">${fmtTime(s.time)}</span>
         </div>`;
       }).join('');
-      const customBadges = showC.map(e =>
-        `<div class="badge-row"><span class="badge custom">${e.name.length > 3 ? e.name.slice(0,3)+'…' : e.name}</span></div>`
-      ).join('');
+      const customBadges = showC.map(e => {
+        const chk = isFuture ? '□' : '';
+        return `<div class="badge-row">
+          <span class="att-chk">${chk}</span>
+          <span class="badge custom">${e.name.length > 3 ? e.name.slice(0,3)+'…' : e.name}</span>
+        </div>`;
+      }).join('');
 
       html += `<div class="${cls}" ${att||hasSch ? `onclick="openDay('${ds}')"` : ''}>
         <div class="date-wrap"><span class="date-num">${d}</span></div>
