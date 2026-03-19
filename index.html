@@ -142,13 +142,14 @@
 
     .attended-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--attended); margin-bottom: 2px; }
 
-    .badges { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; width: 100%; padding: 0 2px; }
-    .badge-row { display: flex; align-items: center; gap: 2px; }
-    .badge  { font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 4px; line-height: 1.5; flex-shrink: 0; }
+    .badges { display: flex; flex-direction: column; gap: 1px; align-items: flex-start; width: 100%; padding: 0 2px; }
+    .badge-row { display: flex; align-items: center; gap: 2px; width: 100%; }
+    .badge  { font-size: 8px; font-weight: 700; padding: 1px 3px; border-radius: 3px; line-height: 1.5; flex-shrink: 0; }
     .badge.roger  { background: var(--roger-bg);  color: var(--roger); }
     .badge.stone  { background: var(--stone-bg);  color: var(--stone); }
     .badge.custom { background: var(--custom-bg); color: var(--custom); }
-    .badge-chk { font-size: 9px; color: var(--text3); line-height: 1; }
+    .badge-time { font-size: 8px; color: var(--text2); white-space: nowrap; }
+    .att-chk { font-size: 8px; line-height: 1; flex-shrink: 0; }
 
     /* ── FAB ── */
     .fab {
@@ -514,6 +515,13 @@
     return [session.skylar, session.didi, session.role3].filter(Boolean).some(a => selected.includes(a));
   }
 
+  // ── 시간 포맷 ──
+  function fmtTime(t) {
+    if (!t) return '';
+    const h = parseInt(t);
+    return (h >= 13 ? h - 12 : h) + '시';
+  }
+
   // ── 달력 ──
   function changeMonth(d) {
     currentMonth += d;
@@ -536,13 +544,15 @@
     for (let d = 1; d <= days; d++) {
       const ds  = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const dow = (first + d - 1) % 7;
-      const showR   = rogerSchedule.filter(s => s.date === ds).some(s => matchesFilter(s, prefs.roger));
-      const showS   = stoneSchedule.filter(s => s.date === ds).some(s => matchesFilter(s, prefs.stone));
-      const showC   = custom.filter(e => e.date === ds);
-      const att     = !!attended[ds];
-      const hasSch  = showR || showS || showC.length > 0;
-      const isToday = ds === todayStr;
-      const isFuture = ds >= todayStr;
+      const dayAtt   = attended[ds] || [];
+      const att      = dayAtt.length > 0;
+      const allSess  = [
+        ...rogerSchedule.filter(s => s.date === ds && matchesFilter(s, prefs.roger)).map(s => ({...s, app:'roger'})),
+        ...stoneSchedule.filter(s => s.date === ds && matchesFilter(s, prefs.stone)).map(s => ({...s, app:'stone'})),
+      ].sort((a,b) => a.time.localeCompare(b.time));
+      const showC    = custom.filter(e => e.date === ds);
+      const hasSch   = allSess.length > 0 || showC.length > 0;
+      const isToday  = ds === todayStr;
 
       const cls = ['cal-cell',
         hasSch      ? 'has-schedule' : '',
@@ -552,14 +562,23 @@
         isToday     ? 'today'        : '',
       ].filter(Boolean).join(' ');
 
+      const sessBadges = allSess.map(s => {
+        const isAtt = dayAtt.some(r => r.app === s.app && (!r.time || r.time === s.time));
+        const label = s.app === 'roger' ? '라져' : '스톤';
+        return `<div class="badge-row">
+          ${isAtt ? '<span class="att-chk">✅</span>' : ''}
+          <span class="badge ${s.app}">${label}</span>
+          <span class="badge-time">${fmtTime(s.time)}</span>
+        </div>`;
+      }).join('');
+      const customBadges = showC.map(e =>
+        `<div class="badge-row"><span class="badge custom">${e.name.length > 3 ? e.name.slice(0,3)+'…' : e.name}</span></div>`
+      ).join('');
+
       html += `<div class="${cls}" ${att||hasSch ? `onclick="openDay('${ds}')"` : ''}>
         <div class="date-wrap"><span class="date-num">${d}</span></div>
-        ${att ? '<div class="attended-dot"></div>' : ''}
-        ${hasSch ? `<div class="badges">
-          ${showR ? `<div class="badge-row"><span class="badge roger">라져</span>${isFuture ? '<span class="badge-chk">□</span>' : ''}</div>` : ''}
-          ${showS ? `<div class="badge-row"><span class="badge stone">스톤</span>${isFuture ? '<span class="badge-chk">□</span>' : ''}</div>` : ''}
-          ${showC.map(e => `<div class="badge-row"><span class="badge custom" title="${e.name}">${e.name.length > 3 ? e.name.slice(0,3)+'…' : e.name}</span>${isFuture ? '<span class="badge-chk">□</span>' : ''}</div>`).join('')}
-        </div>` : ''}
+        ${att && !hasSch ? '<div class="attended-dot"></div>' : ''}
+        ${hasSch ? `<div class="badges">${sessBadges}${customBadges}</div>` : ''}
       </div>`;
     }
     document.getElementById('cal-days').innerHTML = html;
