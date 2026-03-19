@@ -651,13 +651,14 @@
     document.getElementById('sheet-date').textContent =
       `${ds.slice(5).replace('-','.')}(${DOW[d.getDay()]})`;
 
-    const prefs = getPrefs();
-    const sessions = [
-      ...rogerSchedule.filter(s => s.date === ds && matchesFilter(s, prefs.roger)).map(s => ({...s, app:'roger'})),
-      ...stoneSchedule.filter(s => s.date === ds && matchesFilter(s, prefs.stone)).map(s => ({...s, app:'stone'})),
-    ].sort((a,b) => a.time.localeCompare(b.time));
+    const prefs  = getPrefs();
+    const dayAtt = attended[ds] || [];
 
-    const dayAtt  = attended[ds] || [];
+    // 필터 통과 OR 내가 관람한 회차는 항상 표시
+    const sessions = [
+      ...rogerSchedule.filter(s => s.date === ds && (matchesFilter(s, prefs.roger) || dayAtt.some(r => r.app === 'roger' && (!r.time || r.time === s.time)))).map(s => ({...s, app:'roger'})),
+      ...stoneSchedule.filter(s => s.date === ds && (matchesFilter(s, prefs.stone) || dayAtt.some(r => r.app === 'stone' && (!r.time || r.time === s.time)))).map(s => ({...s, app:'stone'})),
+    ].sort((a,b) => (a.time||'').localeCompare(b.time||''));
     const customs = getCustom().filter(e => e.date === ds)
       .sort((a,b) => (a.time||'').localeCompare(b.time||''));
 
