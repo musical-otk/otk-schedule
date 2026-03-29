@@ -614,9 +614,9 @@
       ].filter(Boolean).join(' ');
 
       const sessBadges = allSess.map(s => {
-        const isAtt = dayAtt.some(r => r.app === s.app && (!r.time || r.time === s.time));
-        const chk   = isAtt ? '✅' : '';
-        const label = s.app === 'roger' ? '라져' : '스톤';
+        const attCnt = dayAtt.filter(r => r.app === s.app && (!r.time || r.time === s.time)).length;
+        const chk    = attCnt >= 2 ? `✅×${attCnt}` : (attCnt === 1 ? '✅' : '');
+        const label  = s.app === 'roger' ? '라져' : '스톤';
         return `<div class="badge-row">
           <span class="att-chk">${chk}</span>
           <span class="badge ${s.app}">${label}</span>
@@ -663,22 +663,22 @@
       .sort((a,b) => (a.time||'').localeCompare(b.time||''));
 
     const regularHtml = sessions.map(s => {
-      const cast   = s.app === 'stone'
+      const cast    = s.app === 'stone'
         ? [s.skylar, s.didi, s.role3].filter(Boolean).join(' · ')
         : `${s.skylar} · ${s.didi}`;
-      const attRec = dayAtt.find(r => r.app === s.app && (!r.time || r.time === s.time));
-      const seat   = attRec?.seatZone
-        ? [attRec.seatZone + '구역', attRec.seatRow + '열', attRec.seatNumber + '번']
-            .filter(Boolean).join(' ')
-        : '';
+      const attRecs = dayAtt.filter(r => r.app === s.app && (!r.time || r.time === s.time));
+      const attHtml = attRecs.map(r => {
+        const seat = r.seatZone
+          ? [r.seatZone + '구역', r.seatRow + '열', r.seatNumber + '번'].filter(Boolean).join(' ')
+          : '';
+        return `<div class="session-meta"><span class="session-attended">✓ 관람</span>${seat ? `&nbsp;&nbsp;${seat}` : ''}</div>`;
+      }).join('');
       return `<div class="session-row">
         <div class="session-time">${s.time}</div>
         <div class="session-body">
           <span class="session-tag ${s.app}">${s.app === 'roger' ? '라져' : '스톤'}</span>
           <div class="session-cast">${cast}</div>
-          ${attRec ? `<div class="session-meta">
-            <span class="session-attended">✓ 관람</span>${seat ? `&nbsp;&nbsp;${seat}` : ''}
-          </div>` : ''}
+          ${attHtml}
         </div>
       </div>`;
     }).join('');
