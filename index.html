@@ -243,6 +243,18 @@
     .btn-primary { flex: 1; background: var(--custom); color: #fff; border: none; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; }
     .btn-cancel  { padding: 12px 18px; background: var(--bg3); border: none; border-radius: 10px; color: var(--text2); font-size: 14px; cursor: pointer; }
     .color-picker { display: flex; gap: 8px; flex-wrap: wrap; padding: 4px 0; }
+    .preset-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 10px;
+      border: 1.5px solid var(--border); background: var(--bg3);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .preset-item:active { opacity: 0.7; }
+    .preset-item.added { opacity: 0.4; cursor: default; pointer-events: none; }
+    .preset-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .preset-name { flex: 1; font-size: 14px; font-weight: 600; }
+    .preset-add { font-size: 12px; color: var(--text3); font-weight: 700; }
+
     .color-swatch {
       width: 26px; height: 26px; border-radius: 50%;
       border: 2px solid transparent; cursor: pointer;
@@ -358,13 +370,20 @@
       <div class="custom-title">앱 추가</div>
       <button class="custom-close" onclick="closeAppForm()">✕</button>
     </div>
-    <div class="form-row">
+    <div id="preset-section" style="padding:0 16px 4px">
+      <div class="form-label" style="padding:6px 0 8px">알려진 앱</div>
+      <div id="preset-list" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+    <div style="padding:12px 16px 4px;border-top:1px solid var(--border);margin-top:8px">
+      <div class="form-label" style="padding:0 0 10px">직접 추가</div>
+    </div>
+    <div class="form-row" style="padding-top:0">
       <div class="form-label">앱 이름</div>
-      <input class="form-input" id="af-name" placeholder="예: 아웃캐스트">
+      <input class="form-input" id="af-name" placeholder="예: 라져">
     </div>
     <div class="form-row">
-      <div class="form-label">아이콘 (이모지 또는 1-2글자)</div>
-      <input class="form-input" id="af-icon" placeholder="예: 🎭 또는 아웃">
+      <div class="form-label">아이콘 (이모지 또는 1-2글자, 선택)</div>
+      <input class="form-input" id="af-icon" placeholder="예: ✈">
     </div>
     <div class="form-row">
       <div class="form-label">스케줄 JSON URL</div>
@@ -414,6 +433,27 @@
   }
 
   // ── 앱 설정 ──
+  const PRESET_APPS = [
+    {
+      id: 'app_outcasts',
+      name: '아웃캐스트',
+      icon: '',
+      scheduleUrl: 'https://musical-otk.github.io/outcasts2026/schedule.json',
+      appUrl: 'https://musical-otk.github.io/outcasts2026/',
+      color: '#7aacff',
+      recordsKey: 'outcasts_records',
+    },
+    {
+      id: 'app_eoduk',
+      name: '어둑시니',
+      icon: '',
+      scheduleUrl: 'https://musical-otk.github.io/sinimuni2026/schedule.json',
+      appUrl: 'https://musical-otk.github.io/sinimuni2026/',
+      color: '#f06070',
+      recordsKey: 'eoduk_records',
+    },
+  ];
+
   function getApps() {
     try { return JSON.parse(localStorage.getItem(APPS_KEY)) || []; }
     catch { return []; }
@@ -823,8 +863,35 @@
     document.getElementById('af-app-url').value = '';
     document.getElementById('af-records-key').value = '';
     renderColorPicker('af-colors', COLOR_PALETTE[0]);
+    renderPresets();
     document.getElementById('ov-settings').classList.remove('open');
     document.getElementById('ov-app-form').classList.add('open');
+  }
+
+  function renderPresets() {
+    const addedIds = new Set(getApps().map(a => a.id));
+    document.getElementById('preset-list').innerHTML = PRESET_APPS.map(p => {
+      const added = addedIds.has(p.id);
+      return `<div class="preset-item${added ? ' added' : ''}" onclick="addPreset('${p.id}')">
+        <div class="preset-dot" style="background:${p.color}"></div>
+        <div class="preset-name">${p.name}</div>
+        <div class="preset-add">${added ? '추가됨' : '+ 추가'}</div>
+      </div>`;
+    }).join('');
+  }
+
+  async function addPreset(id) {
+    const preset = PRESET_APPS.find(p => p.id === id);
+    if (!preset) return;
+    const apps = getApps();
+    if (apps.find(a => a.id === id)) return;
+    apps.push({...preset});
+    saveApps(apps);
+    try { schedules[id] = await fetch(preset.scheduleUrl).then(r => r.json()); } catch {}
+    renderTabs();
+    renderFrames();
+    renderPresets();
+    renderCalendar();
   }
 
   function closeAppForm() {
