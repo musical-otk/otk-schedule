@@ -853,6 +853,7 @@
       .sort((a,b) => (a.time||'').localeCompare(b.time||''));
 
     const notes = getNotes();
+    _dayNotePhotos = {};
     const regularHtml = sessions.map(s => {
       const cast = getActorFields(s).map(f => s[f]).filter(Boolean).join(' · ');
       const attRecs = dayAtt.filter(r => r.appId === s._app.id && (!r.time || r.time === s.time));
@@ -870,8 +871,9 @@
       const noteKey = `${s._app.id}__${ds}__${s.time || ''}`;
       const note = notes[noteKey] || {};
       const photos = note.photos || [];
+      _dayNotePhotos[noteKey] = photos;
       const thumbsHtml = photos.map((src, i) =>
-        `<div class="note-thumb-wrap"><img class="note-thumb" src="${src}" onclick="openPhotoViewer(${JSON.stringify(photos)},${i})"></div>`
+        `<div class="note-thumb-wrap"><img class="note-thumb" src="${src}" onclick="openPhotoViewerByKey('${noteKey}',${i})"></div>`
       ).join('');
       const memoSnip = note.memo ? `<span class="note-memo-snip">${note.memo.slice(0,40)}</span>` : '';
       const noteRow = `<div class="note-row">
@@ -1069,7 +1071,7 @@
     const thumbs = photos.map((src, i) => `
       <div class="note-thumb-item">
         <img class="note-large-thumb" src="${src}" onclick="openPhotoViewer(currentNotePhotos(),${i})">
-        <div class="note-thumb-item-del" onclick="removeNotePendingPhoto(${i})">✕</div>
+        <div class="note-thumb-item-del" onclick="removeNotePendingPhoto(${i});event.stopPropagation()">✕</div>
       </div>`).join('');
     document.getElementById('note-photos-area').innerHTML =
       thumbs + `<div class="note-photo-add" onclick="document.getElementById('note-file').click()">+</div>`;
@@ -1130,6 +1132,7 @@
 
   // ── 사진 뷰어 ──
   let _pvPhotos = [], _pvIdx = 0;
+  let _dayNotePhotos = {}; // noteKey → photos[], populated in openDay
   const _pv = { scale: 1, x: 0, y: 0, startDist: 0, startScale: 1, startX: 0, startY: 0, lastTap: 0 };
 
   function pvApply() {
@@ -1148,6 +1151,11 @@
     el.textContent = _pvPhotos.length > 1 ? `${_pvIdx + 1} / ${_pvPhotos.length}` : '';
     document.getElementById('pv-prev').style.display = _pvPhotos.length > 1 ? '' : 'none';
     document.getElementById('pv-next').style.display = _pvPhotos.length > 1 ? '' : 'none';
+  }
+
+  function openPhotoViewerByKey(key, idx) {
+    const photos = _dayNotePhotos[key] || [];
+    if (photos.length) openPhotoViewer(photos, idx);
   }
 
   function openPhotoViewer(photos, idx) {
