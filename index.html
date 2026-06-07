@@ -462,7 +462,7 @@
 
   // ── 배우 필드 자동 감지 (date, time 제외) ──
   function getActorFields(record) {
-    return Object.keys(record).filter(k => k !== 'date' && k !== 'time');
+    return Object.keys(record).filter(k => k !== 'date' && k !== 'time' && !k.startsWith('_'));
   }
 
   // ── 탭 렌더링 ──
