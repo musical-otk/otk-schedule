@@ -756,9 +756,14 @@
       const cast = getActorFields(s).map(f => s[f]).filter(Boolean).join(' · ');
       const attRecs = dayAtt.filter(r => r.appId === s._app.id && (!r.time || r.time === s.time));
       const attHtml = attRecs.map(r => {
-        const seat = r.seatZone
-          ? [r.seatZone + '구역', r.seatRow + '열', r.seatNumber + '번'].filter(Boolean).join(' ')
-          : '';
+        let seat = '';
+        if (r.seatZone && r.seatRow) {
+          seat = [r.seatZone + '구역', r.seatRow + '열', r.seatNumber != null ? r.seatNumber + '번' : ''].filter(Boolean).join(' ');
+        } else if (r.seatZone) {
+          seat = [r.seatZone + '열', r.seatNumber != null ? r.seatNumber + '번' : ''].filter(Boolean).join(' ');
+        } else if (r.seatNumber != null) {
+          seat = r.seatNumber + '번';
+        }
         return `<div class="session-meta"><span class="session-attended">✓ 관람</span>${seat ? `&nbsp;&nbsp;${seat}` : ''}</div>`;
       }).join('');
       return `<div class="session-row">
