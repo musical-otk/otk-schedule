@@ -10,7 +10,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="theme-color" content="#1a1a1a" id="meta-theme">
   <style>
-    /* ── 다크 ── */
     :root {
       --bg1: #111118;
       --bg2: #1a1a24;
@@ -19,18 +18,12 @@
       --text1: #f0f0f0;
       --text2: #aaaaaa;
       --text3: #666670;
-      --roger: #7aacff;
-      --stone: #f06070;
+      --sat: #7aacff;
       --attended: #44aa66;
       --custom: #a78bfa;
-      --roger-bg: rgba(90,140,221,0.16);
-      --roger-bd: rgba(122,172,255,0.36);
-      --stone-bg: rgba(217,64,80,0.16);
-      --stone-bd: rgba(240,96,112,0.36);
       --custom-bg: rgba(167,139,250,0.16);
       --custom-bd: rgba(167,139,250,0.36);
     }
-    /* ── 라이트 ── */
     body.light {
       --bg1: #f8f8f6;
       --bg2: #ffffff;
@@ -39,14 +32,9 @@
       --text1: #1a1a1a;
       --text2: #555550;
       --text3: #999990;
-      --roger: #2a5caa;
-      --stone: #B8182A;
+      --sat: #2a5caa;
       --attended: #2a8a4a;
       --custom: #7c3aed;
-      --roger-bg: rgba(42,92,170,0.08);
-      --roger-bd: rgba(42,92,170,0.28);
-      --stone-bg: rgba(184,24,42,0.08);
-      --stone-bd: rgba(184,24,42,0.28);
       --custom-bg: rgba(124,58,237,0.08);
       --custom-bd: rgba(124,58,237,0.28);
     }
@@ -59,13 +47,11 @@
       transition: background 0.2s, color 0.2s;
     }
 
-    /* ── 앱 래퍼 ── */
     #app {
       max-width: 480px; margin: 0 auto;
       height: 100dvh; display: flex; flex-direction: column;
     }
 
-    /* ── 헤더 ── */
     .header {
       flex-shrink: 0;
       background: var(--bg1); border-bottom: 1px solid var(--border);
@@ -73,10 +59,11 @@
       padding: 10px 12px;
       padding-top: calc(10px + env(safe-area-inset-top));
       transition: background 0.2s, border-color 0.2s;
+      overflow-x: auto;
     }
     .header-title {
       font-size: 13px; font-weight: 700; flex: 1; cursor: pointer;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 56px;
     }
     .hbtn {
       background: none; border: none; cursor: pointer; color: var(--text2);
@@ -84,6 +71,7 @@
       flex-shrink: 0; transition: background 0.15s;
     }
     .hbtn:active { background: var(--bg3); }
+    #app-tabs { display: flex; gap: 6px; flex-shrink: 0; }
     .app-btn {
       padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
       white-space: nowrap; flex-shrink: 0; cursor: pointer;
@@ -91,22 +79,13 @@
       transition: all 0.15s;
     }
     .app-btn:active { opacity: 0.7; }
-    .app-btn.active.roger { background: var(--roger-bg); color: var(--roger); border-color: var(--roger-bd); }
-    .app-btn.active.stone { background: var(--stone-bg); color: var(--stone); border-color: var(--stone-bd); }
 
-    /* ── 달력 뷰 ── */
-    #view-cal {
-      flex: 1; overflow-y: auto;
-    }
+    #view-cal { flex: 1; overflow-y: auto; }
     #view-cal.hidden { display: none; }
 
-    /* ── iframe ── */
-    .app-frame {
-      flex: 1; border: none; display: none;
-    }
+    .app-frame { flex: 1; border: none; display: none; }
     .app-frame.active { display: block; }
 
-    /* ── 월 네비 ── */
     .cal-nav {
       display: flex; justify-content: space-between; align-items: center;
       padding: 12px 14px 8px;
@@ -118,12 +97,11 @@
     .nav-btn:active { background: var(--bg3); }
     .cal-month { font-size: 17px; font-weight: 700; }
 
-    /* ── 달력 ── */
     .cal-grid { padding: 0 10px 24px; }
     .cal-dow { display: grid; grid-template-columns: repeat(7,1fr); margin-bottom: 4px; }
     .dow-cell { text-align: center; font-size: 11px; color: var(--text3); padding: 4px 0; font-weight: 600; }
     .dow-cell:first-child { color: #c06060; }
-    .dow-cell:last-child  { color: var(--roger); }
+    .dow-cell:last-child  { color: var(--sat); }
 
     .cal-days { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
     .cal-cell {
@@ -137,7 +115,7 @@
     .date-wrap { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; }
     .date-num  { font-size: 13px; color: var(--text2); font-weight: 500; line-height: 1; }
     .cal-cell.sunday   .date-num { color: #c06060; }
-    .cal-cell.saturday .date-num { color: var(--roger); }
+    .cal-cell.saturday .date-num { color: var(--sat); }
     .cal-cell.today .date-wrap   { background: var(--text1); border-radius: 50%; }
     .cal-cell.today .date-num    { color: var(--bg1); font-weight: 700; }
 
@@ -145,14 +123,10 @@
 
     .badges { display: flex; flex-direction: column; gap: 1px; align-items: flex-start; width: 100%; padding: 0 2px; }
     .badge-row { display: flex; align-items: center; gap: 2px; width: 100%; }
-    .badge  { font-size: 8px; font-weight: 700; padding: 1px 3px; border-radius: 3px; line-height: 1.5; flex-shrink: 0; }
-    .badge.roger  { background: var(--roger-bg);  color: var(--roger); }
-    .badge.stone  { background: var(--stone-bg);  color: var(--stone); }
-    .badge.custom { background: var(--custom-bg); color: var(--custom); }
+    .badge { font-size: 8px; font-weight: 700; padding: 1px 3px; border-radius: 3px; line-height: 1.5; flex-shrink: 0; }
     .badge-time { font-size: 8px; color: var(--text2); white-space: nowrap; }
     .att-chk { font-size: 8px; line-height: 1; flex-shrink: 0; min-width: 11px; text-align: center; }
 
-    /* ── FAB ── */
     .fab {
       position: sticky; bottom: 20px; float: right; right: 16px;
       width: 44px; height: 44px; border-radius: 50%;
@@ -164,10 +138,8 @@
     }
     .fab:active { opacity: 0.8; }
 
-    /* ── 로딩 ── */
     .loading { text-align: center; padding: 48px 16px; color: var(--text3); font-size: 13px; }
 
-    /* ── 오버레이 ── */
     .overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.48);
       display: flex; align-items: flex-end; z-index: 200;
@@ -184,9 +156,13 @@
     .overlay.open .sheet { transform: translateY(0); }
     .sheet-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 0; }
 
-    /* ── 날짜 상세 ── */
     #sheet-detail { max-height: 70vh; }
-    .sheet-date { font-size: 14px; font-weight: 700; color: var(--text2); padding: 14px 16px 10px; }
+    .sheet-date-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; }
+    .sheet-date { font-size: 14px; font-weight: 700; color: var(--text2); }
+    .sheet-add-btn {
+      background: var(--custom-bg); color: var(--custom); border: 1px solid var(--custom-bd);
+      border-radius: 16px; font-size: 11px; font-weight: 700; padding: 4px 10px; cursor: pointer;
+    }
     .session-row {
       display: flex; align-items: flex-start; gap: 12px;
       padding: 12px 16px; border-top: 1px solid var(--border);
@@ -197,14 +173,16 @@
       display: inline-block; font-size: 10px; font-weight: 700;
       padding: 2px 7px; border-radius: 5px; margin-bottom: 4px; line-height: 1.5;
     }
-    .session-tag.roger  { background: var(--roger-bg);  color: var(--roger); }
-    .session-tag.stone  { background: var(--stone-bg);  color: var(--stone); }
-    .session-tag.custom { background: var(--custom-bg); color: var(--custom); }
     .session-cast { font-size: 14px; font-weight: 500; }
     .session-meta { font-size: 11px; color: var(--text3); margin-top: 3px; }
     .session-attended { font-size: 11px; color: var(--attended); }
+    .session-acts { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; flex-shrink: 0; padding-top: 2px; }
+    .session-act-btn {
+      background: none; border: none; color: var(--text3); font-size: 15px;
+      cursor: pointer; padding: 3px 5px; border-radius: 6px; line-height: 1;
+    }
+    .session-act-btn:active { background: var(--bg3); }
 
-    /* ── 설정 ── */
     #sheet-settings { max-height: 85vh; }
     .settings-hd {
       display: flex; align-items: center; justify-content: space-between;
@@ -221,33 +199,34 @@
       letter-spacing: 0.4px; padding: 10px 0 8px;
       border-top: 1px solid var(--border);
     }
-    .hint { font-size: 11px; color: var(--text3); padding-bottom: 10px; }
+    .hint { font-size: 11px; color: var(--text3); padding-bottom: 6px; }
     .actor-list { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 4px; }
     .chip {
       padding: 6px 13px; border-radius: 20px; font-size: 12px; font-weight: 600;
       cursor: pointer; border: 1.5px solid var(--border);
       background: var(--bg3); color: var(--text2); transition: all 0.15s;
     }
-    .chip.on.roger { background: var(--roger-bg); color: var(--roger); border-color: var(--roger-bd); }
-    .chip.on.stone { background: var(--stone-bg); color: var(--stone); border-color: var(--stone-bd); }
 
-    /* ── 상세 헤더 ── */
-    .sheet-date-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; }
-    .sheet-date { font-size: 14px; font-weight: 700; color: var(--text2); }
-    .sheet-add-btn {
-      background: var(--custom-bg); color: var(--custom); border: 1px solid var(--custom-bd);
-      border-radius: 16px; font-size: 11px; font-weight: 700;
-      padding: 4px 10px; cursor: pointer;
+    .app-list-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
     }
-    /* ── 커스텀 이벤트 액션 ── */
-    .session-acts { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; flex-shrink: 0; padding-top: 2px; }
-    .session-act-btn {
-      background: none; border: none; color: var(--text3); font-size: 15px;
-      cursor: pointer; padding: 3px 5px; border-radius: 6px; line-height: 1;
+    .app-list-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .app-list-name { flex: 1; font-size: 14px; font-weight: 600; }
+    .app-list-del {
+      background: none; border: none; color: var(--text3); font-size: 18px;
+      cursor: pointer; padding: 4px 8px; border-radius: 6px; line-height: 1;
     }
-    .session-act-btn:active { background: var(--bg3); }
-    /* ── 커스텀 폼 ── */
-    #sheet-custom { max-height: 90vh; }
+    .app-list-del:active { background: var(--bg3); }
+    .add-app-btn {
+      margin: 12px 0 4px; width: 100%; padding: 11px;
+      background: none; border: 1.5px dashed var(--border);
+      border-radius: 10px; color: var(--text3); font-size: 13px; font-weight: 600;
+      cursor: pointer;
+    }
+    .add-app-btn:active { background: var(--bg3); }
+
+    #sheet-custom, #sheet-app-form { max-height: 90vh; }
     .custom-hd { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; }
     .custom-title { font-size: 15px; font-weight: 700; }
     .custom-close { background: none; border: none; color: var(--text2); font-size: 18px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
@@ -262,7 +241,6 @@
     .form-actions { display: flex; gap: 8px; padding: 16px; }
     .btn-primary { flex: 1; background: var(--custom); color: #fff; border: none; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 700; cursor: pointer; }
     .btn-cancel  { padding: 12px 18px; background: var(--bg3); border: none; border-radius: 10px; color: var(--text2); font-size: 14px; cursor: pointer; }
-    /* ── 색상 선택 ── */
     .color-picker { display: flex; gap: 8px; flex-wrap: wrap; padding: 4px 0; }
     .color-swatch {
       width: 26px; height: 26px; border-radius: 50%;
@@ -280,11 +258,9 @@
     <div class="header-title" onclick="goToToday()">관극 스케줄</div>
     <button class="hbtn" id="theme-btn" onclick="toggleTheme()">☀️</button>
     <button class="hbtn" onclick="openSettings()">⚙️</button>
-    <button class="app-btn" id="btn-roger" onclick="switchView('roger')">✈ 라져</button>
-    <button class="app-btn" id="btn-stone" onclick="switchView('stone')">🪨 스톤</button>
+    <div id="app-tabs"></div>
   </div>
 
-  <!-- 달력 뷰 -->
   <div id="view-cal">
     <div class="cal-nav">
       <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
@@ -304,9 +280,7 @@
     <button class="fab" onclick="openCustomForm('')">+</button>
   </div>
 
-  <!-- 앱 iframe -->
-  <iframe id="frame-roger" class="app-frame" src="about:blank"></iframe>
-  <iframe id="frame-stone" class="app-frame" src="about:blank"></iframe>
+  <div id="app-frames"></div>
 
 </div>
 
@@ -316,7 +290,7 @@
     <div class="sheet-handle"></div>
     <div class="sheet-date-row">
       <div class="sheet-date" id="sheet-date"></div>
-      <button class="sheet-add-btn" id="sheet-add-btn" onclick="openCustomFormForDay()">+ 기타 추가</button>
+      <button class="sheet-add-btn" onclick="openCustomFormForDay()">+ 기타 추가</button>
     </div>
     <div id="sheet-content"></div>
   </div>
@@ -336,7 +310,7 @@
     </div>
     <div class="form-row">
       <div class="form-label">시간 (선택)</div>
-      <input class="form-input" type="time" id="cf-time" placeholder="예: 14:00">
+      <input class="form-input" type="time" id="cf-time">
     </div>
     <div class="form-row">
       <div class="form-label">공연명</div>
@@ -362,37 +336,69 @@
   <div class="sheet" id="sheet-settings">
     <div class="sheet-handle"></div>
     <div class="settings-hd">
-      <div class="settings-title">배우 필터</div>
+      <div class="settings-title">설정</div>
       <button class="settings-close" onclick="closeSettings()">✕</button>
     </div>
     <div class="settings-body">
-      <div class="hint">선택한 배우의 일정만 달력에 표시됩니다. 아무것도 선택 안 하면 전체 표시.</div>
-      <div class="section-title">✈ 라져</div>
-      <div class="actor-list" id="roger-actors"></div>
-      <div class="section-title" style="margin-top:10px;">🪨 스톤</div>
-      <div class="actor-list" id="stone-actors"></div>
+      <div class="section-title" style="border-top:none;padding-top:2px">앱 목록</div>
+      <div class="hint">탭으로 등록할 앱을 추가하세요.</div>
+      <div id="app-list-ui"></div>
+      <button class="add-app-btn" onclick="openAppForm()">+ 앱 추가</button>
+      <div id="actor-filters"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 앱 추가 폼 -->
+<div class="overlay" id="ov-app-form" onclick="closeOnBg(event,'ov-app-form')">
+  <div class="sheet" id="sheet-app-form">
+    <div class="sheet-handle"></div>
+    <div class="custom-hd">
+      <div class="custom-title">앱 추가</div>
+      <button class="custom-close" onclick="closeAppForm()">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-label">앱 이름</div>
+      <input class="form-input" id="af-name" placeholder="예: 아웃캐스트">
+    </div>
+    <div class="form-row">
+      <div class="form-label">아이콘 (이모지 또는 1-2글자)</div>
+      <input class="form-input" id="af-icon" placeholder="예: 🎭 또는 아웃">
+    </div>
+    <div class="form-row">
+      <div class="form-label">스케줄 JSON URL</div>
+      <input class="form-input" id="af-schedule-url" type="url" placeholder="https://...schedule.json">
+    </div>
+    <div class="form-row">
+      <div class="form-label">앱 URL (탭으로 열 앱, 선택)</div>
+      <input class="form-input" id="af-app-url" type="url" placeholder="https://...">
+    </div>
+    <div class="form-row">
+      <div class="form-label">관람기록 키 (선택)</div>
+      <input class="form-input" id="af-records-key" placeholder="예: roger_records">
+      <div class="hint" style="margin-top:5px">앱이 사용하는 localStorage 키. 비워두면 관람기록 연동 없음.</div>
+    </div>
+    <div class="form-row">
+      <div class="form-label">색상</div>
+      <div class="color-picker" id="af-colors"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" onclick="closeAppForm()">취소</button>
+      <button class="btn-primary" onclick="saveAppForm()">추가</button>
     </div>
   </div>
 </div>
 
 <script>
-  const ROGER_URL = 'https://musical-otk.github.io/roger2026/schedule.json';
-  const STONE_URL = 'https://musical-otk.github.io/stone2026_v2/schedule.json';
-  const ROGER_APP = 'https://musical-otk.github.io/roger2026/';
-  const STONE_APP = 'https://musical-otk.github.io/stone2026_v2/';
-  const DOW       = ['일','월','화','수','목','금','토'];
+  const APPS_KEY   = 'hub_apps';
   const PREFS_KEY  = 'hub_prefs';
   const THEME_KEY  = 'hub_theme';
   const CUSTOM_KEY = 'hub_custom';
+  const DOW        = ['일','월','화','수','목','금','토'];
 
   const COLOR_PALETTE = [
-    '#a78bfa', // purple (default)
-    '#f472b6', // pink
-    '#fb923c', // orange
-    '#facc15', // yellow
-    '#4ade80', // green
-    '#22d3ee', // cyan
-    '#f87171', // red/coral
+    '#7aacff','#f06070','#a78bfa','#f472b6',
+    '#fb923c','#facc15','#4ade80','#22d3ee','#f87171',
   ];
 
   function hexToRgba(hex, alpha) {
@@ -402,25 +408,66 @@
     return `rgba(${r},${g},${b},${alpha})`;
   }
 
-  let _selectedColor = COLOR_PALETTE[0];
-  function selectColor(hex) {
-    _selectedColor = hex;
-    document.querySelectorAll('.color-swatch').forEach(s => {
-      s.classList.toggle('selected', s.dataset.hex === hex);
-    });
+  function appStyle(color) {
+    return `background:${hexToRgba(color,0.16)};color:${color};border:1px solid ${hexToRgba(color,0.36)}`;
   }
-  function renderColorPicker(selectedHex) {
-    _selectedColor = selectedHex || COLOR_PALETTE[0];
-    document.getElementById('cf-colors').innerHTML = COLOR_PALETTE.map(hex =>
-      `<div class="color-swatch${hex === _selectedColor ? ' selected' : ''}"
-        style="background:${hex}" data-hex="${hex}"
-        onclick="selectColor('${hex}')"></div>`
+
+  // ── 앱 설정 ──
+  function getApps() {
+    try { return JSON.parse(localStorage.getItem(APPS_KEY)) || []; }
+    catch { return []; }
+  }
+  function saveApps(list) { localStorage.setItem(APPS_KEY, JSON.stringify(list)); }
+
+  // ── 배우 필드 자동 감지 (date, time 제외) ──
+  function getActorFields(record) {
+    return Object.keys(record).filter(k => k !== 'date' && k !== 'time');
+  }
+
+  // ── 탭 렌더링 ──
+  function renderTabs() {
+    document.getElementById('app-tabs').innerHTML = getApps().map(app =>
+      `<button class="app-btn" id="btn-${app.id}" onclick="switchView('${app.id}')">${app.icon} ${app.name}</button>`
     ).join('');
   }
 
-  let rogerSchedule = [], stoneSchedule = [];
+  // ── iframe 렌더링 ──
+  function renderFrames() {
+    const apps = getApps();
+    const container = document.getElementById('app-frames');
+    apps.forEach(app => {
+      if (app.appUrl && !document.getElementById(`frame-${app.id}`)) {
+        const iframe = document.createElement('iframe');
+        iframe.id = `frame-${app.id}`;
+        iframe.className = 'app-frame';
+        iframe.src = 'about:blank';
+        container.appendChild(iframe);
+      }
+    });
+    const appIds = new Set(apps.map(a => a.id));
+    container.querySelectorAll('iframe').forEach(f => {
+      if (!appIds.has(f.id.replace('frame-', ''))) f.remove();
+    });
+  }
+
+  // ── 색상 선택 ──
+  function selectColorSwatch(el) {
+    el.closest('.color-picker').querySelectorAll('.color-swatch')
+      .forEach(s => s.classList.toggle('selected', s === el));
+  }
+
+  function renderColorPicker(containerId, selectedHex) {
+    const hex = selectedHex || COLOR_PALETTE[0];
+    document.getElementById(containerId).innerHTML = COLOR_PALETTE.map(c =>
+      `<div class="color-swatch${c === hex ? ' selected' : ''}" style="background:${c}"
+        data-hex="${c}" onclick="selectColorSwatch(this)"></div>`
+    ).join('');
+  }
+
+  // ── 상태 ──
+  let schedules = {};
   let currentYear, currentMonth;
-  let currentView = 'cal'; // 'cal' | 'roger' | 'stone'
+  let currentView = 'cal';
   const todayStr = new Date().toISOString().slice(0, 10);
 
   // ── 뷰 전환 ──
@@ -429,34 +476,33 @@
     currentView = view;
 
     document.getElementById('view-cal').classList.toggle('hidden', view !== 'cal');
-    document.getElementById('frame-roger').classList.toggle('active', view === 'roger');
-    document.getElementById('frame-stone').classList.toggle('active', view === 'stone');
 
-    document.getElementById('btn-roger').classList.toggle('active', view === 'roger');
-    document.getElementById('btn-roger').classList.toggle('roger', view === 'roger');
-    document.getElementById('btn-stone').classList.toggle('active', view === 'stone');
-    document.getElementById('btn-stone').classList.toggle('stone', view === 'stone');
+    getApps().forEach(app => {
+      const frame = document.getElementById(`frame-${app.id}`);
+      const btn   = document.getElementById(`btn-${app.id}`);
+      const isActive = view === app.id;
 
-    // lazy load iframe
-    if (view === 'roger') {
-      const f = document.getElementById('frame-roger');
-      if (f.src === 'about:blank') f.src = ROGER_APP;
-    }
-    if (view === 'stone') {
-      const f = document.getElementById('frame-stone');
-      if (f.src === 'about:blank') f.src = STONE_APP;
-    }
+      if (frame) {
+        frame.classList.toggle('active', isActive);
+        if (isActive && frame.src === 'about:blank') frame.src = app.appUrl;
+      }
+      if (btn) {
+        btn.style.cssText = isActive
+          ? `background:${hexToRgba(app.color,0.16)};color:${app.color};border-color:${hexToRgba(app.color,0.36)}`
+          : '';
+      }
+    });
   }
 
   function goToToday() {
-    if (currentView !== 'cal') {
-      currentView = 'cal';
-      document.getElementById('view-cal').classList.remove('hidden');
-      document.getElementById('frame-roger').classList.remove('active');
-      document.getElementById('frame-stone').classList.remove('active');
-      document.getElementById('btn-roger').classList.remove('active','roger');
-      document.getElementById('btn-stone').classList.remove('active','stone');
-    }
+    currentView = 'cal';
+    document.getElementById('view-cal').classList.remove('hidden');
+    getApps().forEach(app => {
+      const frame = document.getElementById(`frame-${app.id}`);
+      const btn   = document.getElementById(`btn-${app.id}`);
+      if (frame) frame.classList.remove('active');
+      if (btn) btn.style.cssText = '';
+    });
     const t = new Date();
     currentYear = t.getFullYear(); currentMonth = t.getMonth();
     renderCalendar();
@@ -464,10 +510,10 @@
 
   // ── 테마 ──
   function getTheme() { return localStorage.getItem(THEME_KEY) || 'dark'; }
-  function applyTheme(theme) {
-    document.body.classList.toggle('light', theme === 'light');
-    document.getElementById('theme-btn').textContent = theme === 'light' ? '🌙' : '☀️';
-    document.getElementById('meta-theme').content = theme === 'light' ? '#f8f8f6' : '#111118';
+  function applyTheme(t) {
+    document.body.classList.toggle('light', t === 'light');
+    document.getElementById('theme-btn').textContent = t === 'light' ? '🌙' : '☀️';
+    document.getElementById('meta-theme').content = t === 'light' ? '#f8f8f6' : '#111118';
   }
   function toggleTheme() {
     const next = getTheme() === 'dark' ? 'light' : 'dark';
@@ -475,12 +521,17 @@
     applyTheme(next);
   }
 
-  // ── 설정 ──
+  // ── 배우 필터 ──
   function getPrefs() {
-    try { return JSON.parse(localStorage.getItem(PREFS_KEY)) || { roger: [], stone: [] }; }
-    catch { return { roger: [], stone: [] }; }
+    try { return JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; }
+    catch { return {}; }
   }
   function savePrefs(p) { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); }
+
+  function matchesFilter(session, selected) {
+    if (!selected || !selected.length) return true;
+    return getActorFields(session).some(f => session[f] && selected.includes(session[f]));
+  }
 
   // ── 커스텀 이벤트 ──
   function getCustom() {
@@ -488,8 +539,7 @@
   }
   function saveCustom(list) { localStorage.setItem(CUSTOM_KEY, JSON.stringify(list)); }
 
-  let _customEditId = null;
-  let _customFormDs = '';
+  let _customEditId = null, _customFormDs = '';
 
   function openCustomForm(ds, editId) {
     _customEditId = editId || null;
@@ -500,24 +550,21 @@
     document.getElementById('cf-time').value    = ev ? ev.time    : '20:00';
     document.getElementById('cf-name').value    = ev ? ev.name    : '';
     document.getElementById('cf-comment').value = ev ? ev.comment : '';
-    renderColorPicker(ev ? ev.color : COLOR_PALETTE[0]);
+    renderColorPicker('cf-colors', ev ? ev.color : COLOR_PALETTE[0]);
     document.getElementById('ov-detail').classList.remove('open');
     document.getElementById('ov-custom').classList.add('open');
   }
-  function openCustomFormForDay() {
-    openCustomForm(_customFormDs);
-  }
-  function closeCustomForm() {
-    document.getElementById('ov-custom').classList.remove('open');
-  }
+  function openCustomFormForDay() { openCustomForm(_customFormDs); }
+  function closeCustomForm() { document.getElementById('ov-custom').classList.remove('open'); }
+
   function saveCustomEvent() {
-    const date    = document.getElementById('cf-date').value;
-    const name    = document.getElementById('cf-name').value.trim();
+    const date = document.getElementById('cf-date').value;
+    const name = document.getElementById('cf-name').value.trim();
     if (!date || !name) { alert('날짜와 공연명을 입력해주세요'); return; }
     const time    = document.getElementById('cf-time').value;
     const comment = document.getElementById('cf-comment').value.trim();
+    const color   = document.querySelector('#cf-colors .color-swatch.selected')?.dataset.hex || COLOR_PALETTE[0];
     const list = getCustom();
-    const color = _selectedColor || COLOR_PALETTE[0];
     if (_customEditId) {
       const idx = list.findIndex(e => e.id === _customEditId);
       if (idx !== -1) list[idx] = { id: _customEditId, date, time, name, comment, color };
@@ -528,6 +575,7 @@
     closeCustomForm();
     renderCalendar();
   }
+
   function deleteCustomEvent(id) {
     if (!confirm('삭제하시겠습니까?')) return;
     saveCustom(getCustom().filter(e => e.id !== id));
@@ -538,31 +586,26 @@
   // ── 관람 기록 ──
   function getAttended() {
     const map = {};
-    const load = (key, app) => {
+    getApps().forEach(app => {
+      if (!app.recordsKey) return;
       try {
-        (JSON.parse(localStorage.getItem(key) || '[]')).forEach(r => {
+        (JSON.parse(localStorage.getItem(app.recordsKey) || '[]')).forEach(r => {
           if (!r.date) return;
           (map[r.date] = map[r.date] || []).push({
-            app, time: r.time,
-            seatZone: r.seatZone, seatRow: r.seatRow, seatNumber: r.seatNumber
+            appId: app.id, time: r.time,
+            seatZone: r.seatZone, seatRow: r.seatRow, seatNumber: r.seatNumber,
           });
         });
       } catch {}
-    };
-    load('roger_records', 'roger');
-    load('stone_records', 'stone');
+    });
     return map;
   }
 
   // ── 배우 목록 ──
   function extractActors(schedule) {
     const s = new Set();
-    schedule.forEach(r => { [r.skylar, r.didi, r.role3].forEach(v => v && s.add(v)); });
+    schedule.forEach(r => getActorFields(r).forEach(f => r[f] && s.add(r[f])));
     return [...s].sort((a, b) => a.localeCompare(b, 'ko'));
-  }
-  function matchesFilter(session, selected) {
-    if (!selected.length) return true;
-    return [session.skylar, session.didi, session.role3].filter(Boolean).some(a => selected.includes(a));
   }
 
   // ── 시간 포맷 ──
@@ -587,6 +630,7 @@
     const prefs    = getPrefs();
     const attended = getAttended();
     const custom   = getCustom();
+    const apps     = getApps();
     let html = '';
 
     for (let i = 0; i < first; i++) html += '<div class="cal-cell"></div>';
@@ -594,16 +638,20 @@
     for (let d = 1; d <= days; d++) {
       const ds  = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
       const dow = (first + d - 1) % 7;
-      const dayAtt   = attended[ds] || [];
-      const att      = dayAtt.length > 0;
-      const allSess  = [
-        ...rogerSchedule.filter(s => s.date === ds && matchesFilter(s, prefs.roger)).map(s => ({...s, app:'roger'})),
-        ...stoneSchedule.filter(s => s.date === ds && matchesFilter(s, prefs.stone)).map(s => ({...s, app:'stone'})),
-      ].sort((a,b) => a.time.localeCompare(b.time));
-      const showC    = custom.filter(e => e.date === ds);
-      const hasSch   = allSess.length > 0 || showC.length > 0;
-      const isToday  = ds === todayStr;
-      const isFuture = ds >= todayStr;
+      const dayAtt  = attended[ds] || [];
+      const att     = dayAtt.length > 0;
+
+      const allSess = apps.flatMap(app => {
+        const sch = schedules[app.id] || [];
+        const appPrefs = prefs[app.id] || [];
+        return sch
+          .filter(s => s.date === ds && matchesFilter(s, appPrefs))
+          .map(s => ({...s, _app: app}));
+      }).sort((a,b) => (a.time||'').localeCompare(b.time||''));
+
+      const showC  = custom.filter(e => e.date === ds);
+      const hasSch = allSess.length > 0 || showC.length > 0;
+      const isToday = ds === todayStr;
 
       const cls = ['cal-cell',
         hasSch      ? 'has-schedule' : '',
@@ -614,23 +662,20 @@
       ].filter(Boolean).join(' ');
 
       const sessBadges = allSess.map(s => {
-        const attCnt = dayAtt.filter(r => r.app === s.app && (!r.time || r.time === s.time)).length;
+        const attCnt = dayAtt.filter(r => r.appId === s._app.id && (!r.time || r.time === s.time)).length;
         const chk    = attCnt >= 2 ? `✅×${attCnt}` : (attCnt === 1 ? '✅' : '');
-        const label  = s.app === 'roger' ? '라져' : '스톤';
         return `<div class="badge-row">
           <span class="att-chk">${chk}</span>
-          <span class="badge ${s.app}">${label}</span>
+          <span class="badge" style="${appStyle(s._app.color)}">${s._app.icon}</span>
           <span class="badge-time">${fmtTime(s.time)}</span>
         </div>`;
       }).join('');
+
       const customBadges = showC.map(e => {
-        const chk = '✅';
         const col = e.color || COLOR_PALETTE[0];
-        const bg  = hexToRgba(col, 0.16);
-        const bd  = hexToRgba(col, 0.36);
         return `<div class="badge-row">
-          <span class="att-chk">${chk}</span>
-          <span class="badge" style="background:${bg};color:${col};border:1px solid ${bd}">${e.name.length > 3 ? e.name.slice(0,3)+'…' : e.name}</span>
+          <span class="att-chk">✅</span>
+          <span class="badge" style="${appStyle(col)}">${e.name.length > 3 ? e.name.slice(0,3)+'…' : e.name}</span>
         </div>`;
       }).join('');
 
@@ -653,20 +698,22 @@
 
     const prefs  = getPrefs();
     const dayAtt = attended[ds] || [];
+    const apps   = getApps();
 
-    // 필터 통과 OR 내가 관람한 회차는 항상 표시
-    const sessions = [
-      ...rogerSchedule.filter(s => s.date === ds && (matchesFilter(s, prefs.roger) || dayAtt.some(r => r.app === 'roger' && (!r.time || r.time === s.time)))).map(s => ({...s, app:'roger'})),
-      ...stoneSchedule.filter(s => s.date === ds && (matchesFilter(s, prefs.stone) || dayAtt.some(r => r.app === 'stone' && (!r.time || r.time === s.time)))).map(s => ({...s, app:'stone'})),
-    ].sort((a,b) => (a.time||'').localeCompare(b.time||''));
+    const sessions = apps.flatMap(app => {
+      const sch = schedules[app.id] || [];
+      const appPrefs = prefs[app.id] || [];
+      return sch
+        .filter(s => s.date === ds && (matchesFilter(s, appPrefs) || dayAtt.some(r => r.appId === app.id && (!r.time || r.time === s.time))))
+        .map(s => ({...s, _app: app}));
+    }).sort((a,b) => (a.time||'').localeCompare(b.time||''));
+
     const customs = getCustom().filter(e => e.date === ds)
       .sort((a,b) => (a.time||'').localeCompare(b.time||''));
 
     const regularHtml = sessions.map(s => {
-      const cast    = s.app === 'stone'
-        ? [s.skylar, s.didi, s.role3].filter(Boolean).join(' · ')
-        : `${s.skylar} · ${s.didi}`;
-      const attRecs = dayAtt.filter(r => r.app === s.app && (!r.time || r.time === s.time));
+      const cast = getActorFields(s).map(f => s[f]).filter(Boolean).join(' · ');
+      const attRecs = dayAtt.filter(r => r.appId === s._app.id && (!r.time || r.time === s.time));
       const attHtml = attRecs.map(r => {
         const seat = r.seatZone
           ? [r.seatZone + '구역', r.seatRow + '열', r.seatNumber + '번'].filter(Boolean).join(' ')
@@ -676,7 +723,7 @@
       return `<div class="session-row">
         <div class="session-time">${s.time}</div>
         <div class="session-body">
-          <span class="session-tag ${s.app}">${s.app === 'roger' ? '라져' : '스톤'}</span>
+          <span class="session-tag" style="${appStyle(s._app.color)}">${s._app.name}</span>
           <div class="session-cast">${cast}</div>
           ${attHtml}
         </div>
@@ -685,13 +732,10 @@
 
     const customHtml = customs.map(e => {
       const col = e.color || COLOR_PALETTE[0];
-      const bg  = hexToRgba(col, 0.16);
-      const bd  = hexToRgba(col, 0.36);
-      return `
-      <div class="session-row">
+      return `<div class="session-row">
         <div class="session-time">${e.time || '—'}</div>
         <div class="session-body">
-          <span class="session-tag" style="background:${bg};color:${col};border:1px solid ${bd}">기타</span>
+          <span class="session-tag" style="${appStyle(col)}">기타</span>
           <div class="session-cast">${e.name}</div>
           ${e.comment ? `<div class="session-meta">${e.comment}</div>` : ''}
         </div>
@@ -708,28 +752,105 @@
     document.getElementById('ov-detail').classList.add('open');
   }
 
-  // ── 설정 패널 ──
+  // ── 설정 ──
   function openSettings() {
-    const prefs = getPrefs();
-    renderChips('roger-actors', extractActors(rogerSchedule), prefs.roger, 'roger');
-    renderChips('stone-actors', extractActors(stoneSchedule),  prefs.stone, 'stone');
+    renderSettingsAppList();
+    renderActorFilters();
     document.getElementById('ov-settings').classList.add('open');
   }
-  function closeSettings() {
-    document.getElementById('ov-settings').classList.remove('open');
+  function closeSettings() { document.getElementById('ov-settings').classList.remove('open'); }
+
+  function renderSettingsAppList() {
+    const apps = getApps();
+    document.getElementById('app-list-ui').innerHTML = apps.length
+      ? apps.map(app => `
+        <div class="app-list-item">
+          <div class="app-list-dot" style="background:${app.color}"></div>
+          <div class="app-list-name">${app.icon} ${app.name}</div>
+          <button class="app-list-del" onclick="deleteApp('${app.id}')">✕</button>
+        </div>`).join('')
+      : '<div style="font-size:12px;color:var(--text3);padding:6px 0">등록된 앱이 없습니다</div>';
   }
-  function renderChips(id, actors, selected, app) {
-    document.getElementById(id).innerHTML = actors.map(a =>
-      `<button class="chip ${selected.includes(a) ? 'on '+app : ''}" onclick="toggleActor('${app}','${a}',this)">${a}</button>`
-    ).join('');
-  }
-  function toggleActor(app, name, el) {
+
+  function renderActorFilters() {
+    const apps  = getApps();
     const prefs = getPrefs();
-    const idx = prefs[app].indexOf(name);
-    if (idx === -1) prefs[app].push(name); else prefs[app].splice(idx, 1);
+    document.getElementById('actor-filters').innerHTML = apps.map(app => {
+      const actors = extractActors(schedules[app.id] || []);
+      if (!actors.length) return '';
+      const selected = prefs[app.id] || [];
+      const chips = actors.map(a => {
+        const isOn = selected.includes(a);
+        const chipStyle = isOn ? `background:${hexToRgba(app.color,0.16)};color:${app.color};border-color:${hexToRgba(app.color,0.36)}` : '';
+        return `<button class="chip${isOn ? ' on' : ''}" style="${chipStyle}"
+          onclick="toggleActor('${app.id}','${a}',this,'${app.color}')">${a}</button>`;
+      }).join('');
+      return `<div class="section-title" style="color:${app.color}">${app.icon} ${app.name}</div>
+              <div class="hint">선택한 배우의 일정만 표시됩니다. 아무것도 선택 안 하면 전체 표시.</div>
+              <div class="actor-list">${chips}</div>`;
+    }).join('');
+  }
+
+  function toggleActor(appId, name, el, color) {
+    const prefs = getPrefs();
+    prefs[appId] = prefs[appId] || [];
+    const idx = prefs[appId].indexOf(name);
+    if (idx === -1) prefs[appId].push(name); else prefs[appId].splice(idx, 1);
     savePrefs(prefs);
-    el.classList.toggle('on');
-    el.classList.toggle(app, prefs[app].includes(name));
+    const isOn = prefs[appId].includes(name);
+    el.classList.toggle('on', isOn);
+    el.style.cssText = isOn ? `background:${hexToRgba(color,0.16)};color:${color};border-color:${hexToRgba(color,0.36)}` : '';
+    renderCalendar();
+  }
+
+  function deleteApp(id) {
+    if (!confirm('앱을 목록에서 삭제하시겠습니까?')) return;
+    saveApps(getApps().filter(a => a.id !== id));
+    delete schedules[id];
+    renderTabs();
+    renderFrames();
+    renderSettingsAppList();
+    renderActorFilters();
+    renderCalendar();
+  }
+
+  // ── 앱 추가 폼 ──
+  function openAppForm() {
+    document.getElementById('af-name').value = '';
+    document.getElementById('af-icon').value = '';
+    document.getElementById('af-schedule-url').value = '';
+    document.getElementById('af-app-url').value = '';
+    document.getElementById('af-records-key').value = '';
+    renderColorPicker('af-colors', COLOR_PALETTE[0]);
+    document.getElementById('ov-settings').classList.remove('open');
+    document.getElementById('ov-app-form').classList.add('open');
+  }
+
+  function closeAppForm() {
+    document.getElementById('ov-app-form').classList.remove('open');
+    openSettings();
+  }
+
+  async function saveAppForm() {
+    const name        = document.getElementById('af-name').value.trim();
+    const icon        = document.getElementById('af-icon').value.trim();
+    const scheduleUrl = document.getElementById('af-schedule-url').value.trim();
+    const appUrl      = document.getElementById('af-app-url').value.trim();
+    const recordsKey  = document.getElementById('af-records-key').value.trim();
+    if (!name || !scheduleUrl) { alert('앱 이름과 스케줄 URL을 입력해주세요'); return; }
+    const color = document.querySelector('#af-colors .color-swatch.selected')?.dataset.hex || COLOR_PALETTE[0];
+    const id = 'app_' + Date.now();
+    const app = { id, name, icon: icon || name.slice(0,2), scheduleUrl, appUrl, color, recordsKey: recordsKey || null };
+    const apps = getApps();
+    apps.push(app);
+    saveApps(apps);
+    try {
+      schedules[id] = await fetch(scheduleUrl).then(r => r.json());
+    } catch {}
+    renderTabs();
+    renderFrames();
+    document.getElementById('ov-app-form').classList.remove('open');
+    openSettings();
     renderCalendar();
   }
 
@@ -743,15 +864,19 @@
     applyTheme(getTheme());
     const t = new Date();
     currentYear = t.getFullYear(); currentMonth = t.getMonth();
-    try {
-      const [rRes, sRes] = await Promise.all([fetch(ROGER_URL), fetch(STONE_URL)]);
-      rogerSchedule = await rRes.json();
-      stoneSchedule = await sRes.json();
-      document.getElementById('status').style.display = 'none';
-      renderCalendar();
-    } catch {
-      document.getElementById('status').textContent = '스케줄을 불러오지 못했습니다';
+    renderTabs();
+    renderFrames();
+    const apps = getApps();
+    if (!apps.length) {
+      document.getElementById('status').textContent = '⚙️ 설정에서 앱을 추가해 주세요';
+      return;
     }
+    await Promise.all(apps.map(async app => {
+      try { schedules[app.id] = await fetch(app.scheduleUrl).then(r => r.json()); }
+      catch {}
+    }));
+    document.getElementById('status').style.display = 'none';
+    renderCalendar();
   }
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/otk-schedule/sw.js');
