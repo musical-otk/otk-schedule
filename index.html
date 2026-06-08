@@ -231,7 +231,7 @@
     .custom-hd { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; }
     .custom-title { font-size: 15px; font-weight: 700; }
     .custom-close { background: none; border: none; color: var(--text2); font-size: 18px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
-    .form-row { padding: 8px 16px; }
+    .form-row { padding: 8px 16px; overflow: visible; }
     .form-label { font-size: 11px; color: var(--text3); font-weight: 700; margin-bottom: 5px; }
     .form-input {
       width: 100%; background: var(--bg3); border: 1px solid var(--border);
@@ -283,7 +283,7 @@
       cursor: pointer; white-space: nowrap; flex-shrink: 0;
     }
     .note-add-btn:active { background: var(--bg3); }
-    .note-photos-area { display: flex; flex-wrap: wrap; gap: 8px; padding: 4px 0; }
+    .note-photos-area { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 0 4px; }
     .note-photo-add {
       width: 72px; height: 72px; border-radius: 8px;
       border: 1.5px dashed var(--border); background: var(--bg3);
@@ -294,10 +294,10 @@
     .note-large-thumb { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; display: block; }
     .note-thumb-item { position: relative; flex-shrink: 0; }
     .note-thumb-item-del {
-      position: absolute; top: -6px; right: -6px;
-      background: var(--bg1); border: 1px solid var(--border); border-radius: 50%;
+      position: absolute; top: 3px; right: 3px;
+      background: rgba(0,0,0,0.6); border-radius: 50%;
       width: 20px; height: 20px; font-size: 11px; line-height: 20px; text-align: center;
-      cursor: pointer; color: var(--text2);
+      cursor: pointer; color: #fff;
     }
 
     /* ── 사진 뷰어 ── */
