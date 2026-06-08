@@ -401,6 +401,11 @@
       <input class="form-input" type="text" id="cf-comment" placeholder="메모">
     </div>
     <div class="form-row">
+      <div class="form-label">사진</div>
+      <div class="note-photos-area" id="cf-photos-area"></div>
+      <input type="file" id="cf-photo-file" accept="image/*" multiple style="display:none" onchange="handleCustomPhotos(this)">
+    </div>
+    <div class="form-row">
       <div class="form-label">색상</div>
       <div class="color-picker" id="cf-colors"></div>
     </div>
@@ -681,9 +686,11 @@
   function saveCustom(list) { localStorage.setItem(CUSTOM_KEY, JSON.stringify(list)); }
 
   let _customEditId = null, _customFormDs = '';
+  let _customPendingPhotos = null; // null = unchanged, array = new state
 
   function openCustomForm(ds, editId) {
     _customEditId = editId || null;
+    _customPendingPhotos = null;
     _customFormDs = ds || todayStr;
     const ev = editId ? getCustom().find(e => e.id === editId) : null;
     document.getElementById('custom-form-title').textContent = ev ? '기타 일정 수정' : '기타 일정 추가';
@@ -692,11 +699,57 @@
     document.getElementById('cf-name').value    = ev ? ev.name    : '';
     document.getElementById('cf-comment').value = ev ? ev.comment : '';
     renderColorPicker('cf-colors', ev ? ev.color : COLOR_PALETTE[0]);
+    renderCustomPhotosArea(ev ? (ev.photos || []) : []);
     document.getElementById('ov-detail').classList.remove('open');
     document.getElementById('ov-custom').classList.add('open');
   }
   function openCustomFormForDay() { openCustomForm(_customFormDs); }
   function closeCustomForm() { document.getElementById('ov-custom').classList.remove('open'); }
+
+  function currentCustomPhotos() {
+    if (_customPendingPhotos !== null) return _customPendingPhotos;
+    if (_customEditId) return (getCustom().find(e => e.id === _customEditId) || {}).photos || [];
+    return [];
+  }
+
+  function renderCustomPhotosArea(photos) {
+    const thumbs = photos.map((src, i) => `
+      <div class="note-thumb-item">
+        <img class="note-large-thumb" src="${src}" onclick="openPhotoViewer(currentCustomPhotos(),${i})">
+        <div class="note-thumb-item-del" onclick="removeCustomPendingPhoto(${i});event.stopPropagation()">✕</div>
+      </div>`).join('');
+    document.getElementById('cf-photos-area').innerHTML =
+      thumbs + `<div class="note-photo-add" onclick="document.getElementById('cf-photo-file').click()">+</div>`;
+  }
+
+  function removeCustomPendingPhoto(idx) {
+    const photos = [...currentCustomPhotos()];
+    photos.splice(idx, 1);
+    _customPendingPhotos = photos;
+    renderCustomPhotosArea(photos);
+  }
+
+  function handleCustomPhotos(input) {
+    const files = [...input.files];
+    if (!files.length) return;
+    input.value = '';
+    const photos = [...currentCustomPhotos()];
+    let done = 0;
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = e => {
+        resizeImage(e.target.result, 1400, 1800, 0.82, resized => {
+          photos.push(resized);
+          done++;
+          if (done === files.length) {
+            _customPendingPhotos = photos;
+            renderCustomPhotosArea(photos);
+          }
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  }
 
   function saveCustomEvent() {
     const date = document.getElementById('cf-date').value;
@@ -705,12 +758,13 @@
     const time    = document.getElementById('cf-time').value;
     const comment = document.getElementById('cf-comment').value.trim();
     const color   = document.querySelector('#cf-colors .color-swatch.selected')?.dataset.hex || COLOR_PALETTE[0];
+    const photos  = _customPendingPhotos !== null ? _customPendingPhotos : currentCustomPhotos();
     const list = getCustom();
     if (_customEditId) {
       const idx = list.findIndex(e => e.id === _customEditId);
-      if (idx !== -1) list[idx] = { id: _customEditId, date, time, name, comment, color };
+      if (idx !== -1) list[idx] = { id: _customEditId, date, time, name, comment, color, photos };
     } else {
-      list.push({ id: Date.now(), date, time, name, comment, color });
+      list.push({ id: Date.now(), date, time, name, comment, color, photos });
     }
     saveCustom(list);
     closeCustomForm();
@@ -894,12 +948,18 @@
 
     const customHtml = customs.map(e => {
       const col = e.color || COLOR_PALETTE[0];
+      const cPhotos = e.photos || [];
+      _dayNotePhotos['custom_' + e.id] = cPhotos;
+      const cThumbs = cPhotos.map((src, i) =>
+        `<div class="note-thumb-wrap"><img class="note-thumb" src="${src}" data-key="custom_${e.id}" data-idx="${i}"></div>`
+      ).join('');
       return `<div class="session-row">
         <div class="session-time">${e.time || '—'}</div>
         <div class="session-body">
           <span class="session-tag" style="${appStyle(col)}">기타</span>
           <div class="session-cast">${e.name}</div>
           ${e.comment ? `<div class="session-meta">${e.comment}</div>` : ''}
+          ${cThumbs ? `<div class="note-row">${cThumbs}</div>` : ''}
         </div>
         <div class="session-acts">
           <button class="session-act-btn" onclick="openCustomForm('${ds}',${e.id})">✏️</button>
