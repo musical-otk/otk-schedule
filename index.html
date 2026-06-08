@@ -873,7 +873,7 @@
       const photos = note.photos || [];
       _dayNotePhotos[noteKey] = photos;
       const thumbsHtml = photos.map((src, i) =>
-        `<div class="note-thumb-wrap"><img class="note-thumb" src="${src}" onclick="openPhotoViewerByKey('${noteKey}',${i})"></div>`
+        `<div class="note-thumb-wrap"><img class="note-thumb" src="${src}" data-key="${noteKey}" data-idx="${i}"></div>`
       ).join('');
       const memoSnip = note.memo ? `<span class="note-memo-snip">${note.memo.slice(0,40)}</span>` : '';
       const noteRow = `<div class="note-row">
@@ -910,6 +910,10 @@
 
     document.getElementById('sheet-content').innerHTML =
       (regularHtml + customHtml) || '<div style="padding:16px;color:var(--text3);font-size:13px;">일정 없음</div>';
+
+    document.getElementById('sheet-content').querySelectorAll('.note-thumb[data-key]').forEach(img => {
+      img.addEventListener('click', () => openPhotoViewerByKey(img.dataset.key, parseInt(img.dataset.idx)));
+    });
 
     document.getElementById('ov-detail').classList.add('open');
   }
