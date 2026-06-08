@@ -1,4 +1,4 @@
-const CACHE_NAME = 'otk-schedule-v22';
+const CACHE_NAME = 'otk-schedule-v23';
 const BASE = '/otk-schedule';
 
 const PRECACHE_URLS = [

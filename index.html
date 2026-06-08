@@ -686,11 +686,10 @@
   function saveCustom(list) { localStorage.setItem(CUSTOM_KEY, JSON.stringify(list)); }
 
   let _customEditId = null, _customFormDs = '';
-  let _customPendingPhotos = null; // null = unchanged, array = new state
+  let _customPendingPhotos = []; // base64[] in memory during editing
 
-  function openCustomForm(ds, editId) {
+  async function openCustomForm(ds, editId) {
     _customEditId = editId || null;
-    _customPendingPhotos = null;
     _customFormDs = ds || todayStr;
     const ev = editId ? getCustom().find(e => e.id === editId) : null;
     document.getElementById('custom-form-title').textContent = ev ? '기타 일정 수정' : '기타 일정 추가';
@@ -699,23 +698,19 @@
     document.getElementById('cf-name').value    = ev ? ev.name    : '';
     document.getElementById('cf-comment').value = ev ? ev.comment : '';
     renderColorPicker('cf-colors', ev ? ev.color : COLOR_PALETTE[0]);
-    renderCustomPhotosArea(ev ? (ev.photos || []) : []);
+    const photoMap = await PhotoDB.getMany(ev?.photoIds || []);
+    _customPendingPhotos = (ev?.photoIds || []).map(id => photoMap[id]).filter(Boolean);
+    renderCustomPhotosArea(_customPendingPhotos);
     document.getElementById('ov-detail').classList.remove('open');
     document.getElementById('ov-custom').classList.add('open');
   }
   function openCustomFormForDay() { openCustomForm(_customFormDs); }
   function closeCustomForm() { document.getElementById('ov-custom').classList.remove('open'); }
 
-  function currentCustomPhotos() {
-    if (_customPendingPhotos !== null) return _customPendingPhotos;
-    if (_customEditId) return (getCustom().find(e => e.id === _customEditId) || {}).photos || [];
-    return [];
-  }
-
   function renderCustomPhotosArea(photos) {
     const thumbs = photos.map((src, i) => `
       <div class="note-thumb-item">
-        <img class="note-large-thumb" src="${src}" onclick="openPhotoViewer(currentCustomPhotos(),${i})">
+        <img class="note-large-thumb" src="${src}" onclick="openPhotoViewer(_customPendingPhotos,${i})">
         <div class="note-thumb-item-del" onclick="removeCustomPendingPhoto(${i});event.stopPropagation()">✕</div>
       </div>`).join('');
     document.getElementById('cf-photos-area').innerHTML =
@@ -723,56 +718,56 @@
   }
 
   function removeCustomPendingPhoto(idx) {
-    const photos = [...currentCustomPhotos()];
-    photos.splice(idx, 1);
-    _customPendingPhotos = photos;
-    renderCustomPhotosArea(photos);
+    _customPendingPhotos.splice(idx, 1);
+    renderCustomPhotosArea(_customPendingPhotos);
   }
 
   function handleCustomPhotos(input) {
     const files = [...input.files];
     if (!files.length) return;
     input.value = '';
-    const photos = [...currentCustomPhotos()];
     let done = 0;
     files.forEach(file => {
       const reader = new FileReader();
       reader.onload = e => {
         resizeImage(e.target.result, 1400, 1800, 0.82, resized => {
-          photos.push(resized);
-          done++;
-          if (done === files.length) {
-            _customPendingPhotos = photos;
-            renderCustomPhotosArea(photos);
-          }
+          _customPendingPhotos.push(resized);
+          if (++done === files.length) renderCustomPhotosArea(_customPendingPhotos);
         });
       };
       reader.readAsDataURL(file);
     });
   }
 
-  function saveCustomEvent() {
+  async function saveCustomEvent() {
     const date = document.getElementById('cf-date').value;
     const name = document.getElementById('cf-name').value.trim();
     if (!date || !name) { alert('날짜와 공연명을 입력해주세요'); return; }
     const time    = document.getElementById('cf-time').value;
     const comment = document.getElementById('cf-comment').value.trim();
     const color   = document.querySelector('#cf-colors .color-swatch.selected')?.dataset.hex || COLOR_PALETTE[0];
-    const photos  = _customPendingPhotos !== null ? _customPendingPhotos : currentCustomPhotos();
     const list = getCustom();
+    // 기존 사진 삭제
+    if (_customEditId) {
+      const old = list.find(e => e.id === _customEditId);
+      await Promise.all((old?.photoIds || []).map(id => PhotoDB.remove(id)));
+    }
+    const photoIds = await Promise.all(_customPendingPhotos.map(src => PhotoDB.put(src)));
     if (_customEditId) {
       const idx = list.findIndex(e => e.id === _customEditId);
-      if (idx !== -1) list[idx] = { id: _customEditId, date, time, name, comment, color, photos };
+      if (idx !== -1) list[idx] = { id: _customEditId, date, time, name, comment, color, photoIds };
     } else {
-      list.push({ id: Date.now(), date, time, name, comment, color, photos });
+      list.push({ id: Date.now(), date, time, name, comment, color, photoIds });
     }
     saveCustom(list);
     closeCustomForm();
     renderCalendar();
   }
 
-  function deleteCustomEvent(id) {
+  async function deleteCustomEvent(id) {
     if (!confirm('삭제하시겠습니까?')) return;
+    const ev = getCustom().find(e => e.id === id);
+    await Promise.all((ev?.photoIds || []).map(pid => PhotoDB.remove(pid)));
     saveCustom(getCustom().filter(e => e.id !== id));
     document.getElementById('ov-detail').classList.remove('open');
     renderCalendar();
@@ -884,7 +879,7 @@
   }
 
   // ── 날짜 상세 ──
-  function openDay(ds) {
+  async function openDay(ds) {
     _customFormDs = ds;
     const attended = getAttended();
     const d = new Date(ds + 'T00:00:00');
@@ -906,7 +901,14 @@
     const customs = getCustom().filter(e => e.date === ds)
       .sort((a,b) => (a.time||'').localeCompare(b.time||''));
 
+    // IndexedDB에서 이 날의 모든 사진 한번에 로드
     const notes = getNotes();
+    const allIds = [
+      ...sessions.flatMap(s => notes[`${s._app.id}__${ds}__${s.time || ''}`]?.photoIds || []),
+      ...customs.flatMap(e => e.photoIds || []),
+    ];
+    const photoMap = await PhotoDB.getMany(allIds);
+
     _dayNotePhotos = {};
     const regularHtml = sessions.map(s => {
       const cast = getActorFields(s).map(f => s[f]).filter(Boolean).join(' · ');
@@ -924,7 +926,8 @@
       }).join('');
       const noteKey = `${s._app.id}__${ds}__${s.time || ''}`;
       const note = notes[noteKey] || {};
-      const photos = note.photos || [];
+      const photoIds = note.photoIds || [];
+      const photos = photoIds.map(id => photoMap[id]).filter(Boolean);
       _dayNotePhotos[noteKey] = photos;
       const thumbsHtml = photos.map((src, i) =>
         `<div class="note-thumb-wrap"><img class="note-thumb" src="${src}" data-key="${noteKey}" data-idx="${i}"></div>`
@@ -948,7 +951,8 @@
 
     const customHtml = customs.map(e => {
       const col = e.color || COLOR_PALETTE[0];
-      const cPhotos = e.photos || [];
+      const cPhotoIds = e.photoIds || [];
+      const cPhotos = cPhotoIds.map(id => photoMap[id]).filter(Boolean);
       _dayNotePhotos['custom_' + e.id] = cPhotos;
       const cThumbs = cPhotos.map((src, i) =>
         `<div class="note-thumb-wrap"><img class="note-thumb" src="${src}" data-key="custom_${e.id}" data-idx="${i}"></div>`
@@ -1107,34 +1111,75 @@
     renderCalendar();
   }
 
+  // ── PhotoDB (IndexedDB) ──
+  const PhotoDB = (() => {
+    const DB_NAME = 'otk-photos', STORE = 'photos';
+    let _db = null;
+    function open() {
+      if (_db) return Promise.resolve(_db);
+      return new Promise((res, rej) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = e => e.target.result.createObjectStore(STORE, {autoIncrement: true});
+        req.onsuccess = e => { _db = e.target.result; res(_db); };
+        req.onerror = e => rej(e.target.error);
+      });
+    }
+    async function put(dataUrl) {
+      const db = await open();
+      return new Promise((res, rej) => {
+        const req = db.transaction(STORE,'readwrite').objectStore(STORE).add(dataUrl);
+        req.onsuccess = e => res(e.target.result);
+        req.onerror = e => rej(e.target.error);
+      });
+    }
+    async function remove(id) {
+      const db = await open();
+      return new Promise((res, rej) => {
+        const req = db.transaction(STORE,'readwrite').objectStore(STORE).delete(id);
+        req.onsuccess = () => res();
+        req.onerror = e => rej(e.target.error);
+      });
+    }
+    async function getMany(ids) {
+      if (!ids || !ids.length) return {};
+      const db = await open();
+      return new Promise((res, rej) => {
+        const result = {}, tx = db.transaction(STORE);
+        let pending = ids.length;
+        ids.forEach(id => {
+          const req = tx.objectStore(STORE).get(id);
+          req.onsuccess = e => { result[id] = e.target.result; if (!--pending) res(result); };
+          req.onerror = e => rej(e.target.error);
+        });
+      });
+    }
+    return {put, remove, getMany};
+  })();
+
   // ── 메모/사진 ──
   const NOTES_KEY = 'hub_notes';
   function getNotes() { try { return JSON.parse(localStorage.getItem(NOTES_KEY)) || {}; } catch { return {}; } }
   function saveNotes(n) { localStorage.setItem(NOTES_KEY, JSON.stringify(n)); }
 
-  let _noteKey = '', _notePendingPhotos = null; // null = unchanged, array = new state
+  let _noteKey = '', _notePendingPhotos = []; // base64[] in memory during editing
 
-  function openNoteForm(key, appName) {
+  async function openNoteForm(key, appName) {
     _noteKey = key;
-    _notePendingPhotos = null;
     const note = getNotes()[key] || {};
     document.getElementById('note-form-title').textContent = appName + ' 메모';
     document.getElementById('note-memo-input').value = note.memo || '';
-    renderNotePhotosArea(note.photos || []);
+    const photoMap = await PhotoDB.getMany(note.photoIds || []);
+    _notePendingPhotos = (note.photoIds || []).map(id => photoMap[id]).filter(Boolean);
+    renderNotePhotosArea(_notePendingPhotos);
     document.getElementById('ov-detail').classList.remove('open');
     document.getElementById('ov-note').classList.add('open');
   }
   function closeNoteForm() { document.getElementById('ov-note').classList.remove('open'); }
 
-  function currentNotePhotos() {
-    if (_notePendingPhotos !== null) return _notePendingPhotos;
-    return (getNotes()[_noteKey] || {}).photos || [];
-  }
-
   function renderNotePhotosArea(photos) {
     const thumbs = photos.map((src, i) => `
       <div class="note-thumb-item">
-        <img class="note-large-thumb" src="${src}" onclick="openPhotoViewer(currentNotePhotos(),${i})">
+        <img class="note-large-thumb" src="${src}" onclick="openPhotoViewer(_notePendingPhotos,${i})">
         <div class="note-thumb-item-del" onclick="removeNotePendingPhoto(${i});event.stopPropagation()">✕</div>
       </div>`).join('');
     document.getElementById('note-photos-area').innerHTML =
@@ -1142,28 +1187,21 @@
   }
 
   function removeNotePendingPhoto(idx) {
-    const photos = [...currentNotePhotos()];
-    photos.splice(idx, 1);
-    _notePendingPhotos = photos;
-    renderNotePhotosArea(photos);
+    _notePendingPhotos.splice(idx, 1);
+    renderNotePhotosArea(_notePendingPhotos);
   }
 
   function handleNotePhotos(input) {
     const files = [...input.files];
     if (!files.length) return;
     input.value = '';
-    const photos = [...currentNotePhotos()];
     let done = 0;
     files.forEach(file => {
       const reader = new FileReader();
       reader.onload = e => {
         resizeImage(e.target.result, 1400, 1800, 0.82, resized => {
-          photos.push(resized);
-          done++;
-          if (done === files.length) {
-            _notePendingPhotos = photos;
-            renderNotePhotosArea(photos);
-          }
+          _notePendingPhotos.push(resized);
+          if (++done === files.length) renderNotePhotosArea(_notePendingPhotos);
         });
       };
       reader.readAsDataURL(file);
@@ -1183,12 +1221,16 @@
     img.src = dataUrl;
   }
 
-  function saveNoteForm() {
+  async function saveNoteForm() {
     const notes = getNotes();
     const memo = document.getElementById('note-memo-input').value.trim();
-    const photos = _notePendingPhotos !== null ? _notePendingPhotos : ((notes[_noteKey] || {}).photos || []);
-    if (!memo && !photos.length) delete notes[_noteKey];
-    else notes[_noteKey] = { memo, photos };
+    const newPhotos = _notePendingPhotos;
+    // 기존 사진 삭제
+    await Promise.all((notes[_noteKey]?.photoIds || []).map(id => PhotoDB.remove(id)));
+    // 새 사진 저장
+    const photoIds = await Promise.all(newPhotos.map(src => PhotoDB.put(src)));
+    if (!memo && !photoIds.length) delete notes[_noteKey];
+    else notes[_noteKey] = { memo, photoIds };
     saveNotes(notes);
     closeNoteForm();
     openDay(_customFormDs);
@@ -1266,12 +1308,49 @@
   }
 
   // ── 초기화 ──
+  // localStorage base64 → IndexedDB 마이그레이션 (구버전 데이터 변환)
+  async function migratePhotosToIndexedDB() {
+    let migrated = false;
+    const notes = getNotes();
+    for (const key of Object.keys(notes)) {
+      const note = notes[key];
+      if (Array.isArray(note.photos) && note.photos.length > 0 && !note.photoIds) {
+        const ids = [];
+        for (const b64 of note.photos) {
+          const id = await PhotoDB.put(b64);
+          ids.push(id);
+        }
+        note.photoIds = ids;
+        delete note.photos;
+        migrated = true;
+      }
+    }
+    if (migrated) localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+
+    let customMigrated = false;
+    const customs = getCustom();
+    for (const e of customs) {
+      if (Array.isArray(e.photos) && e.photos.length > 0 && !e.photoIds) {
+        const ids = [];
+        for (const b64 of e.photos) {
+          const id = await PhotoDB.put(b64);
+          ids.push(id);
+        }
+        e.photoIds = ids;
+        delete e.photos;
+        customMigrated = true;
+      }
+    }
+    if (customMigrated) localStorage.setItem(CUSTOM_KEY, JSON.stringify(customs));
+  }
+
   async function init() {
     applyTheme(getTheme());
     const t = new Date();
     currentYear = t.getFullYear(); currentMonth = t.getMonth();
     renderTabs();
     renderFrames();
+    await migratePhotosToIndexedDB();
     const apps = getApps();
     if (!apps.length) {
       document.getElementById('status').textContent = '⚙️ 설정에서 앱을 추가해 주세요';
