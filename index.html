@@ -401,13 +401,15 @@
       <input class="form-input" type="text" id="cf-comment" placeholder="메모">
     </div>
     <div class="form-row">
-      <div class="form-label">사진</div>
-      <div class="note-photos-area" id="cf-photos-area"></div>
-      <input type="file" id="cf-photo-file" accept="image/*" multiple style="display:none" onchange="handleCustomPhotos(this)">
-    </div>
-    <div class="form-row">
       <div class="form-label">색상</div>
       <div class="color-picker" id="cf-colors"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-label">사진</div>
+      <div class="note-photos-area" id="cf-photos-area">
+        <div class="note-photo-add" onclick="document.getElementById('cf-photo-file').click()">+</div>
+      </div>
+      <input type="file" id="cf-photo-file" accept="image/*" multiple style="display:none" onchange="handleCustomPhotos(this)">
     </div>
     <div class="form-actions">
       <button class="btn-cancel" onclick="closeCustomForm()">취소</button>
@@ -1371,6 +1373,17 @@
   _pvImg.addEventListener('touchstart', pvTouchStart, {passive: false});
   _pvImg.addEventListener('touchmove',  pvTouchMove,  {passive: false});
   _pvImg.addEventListener('touchend',   pvTouchEnd,   {passive: false});
+
+  // 뒤로가기 버튼: 오버레이 닫기 (PWA 앱 종료 방지)
+  const OVERLAY_CLOSE_ORDER = ['ov-photo-view','ov-note','ov-custom','ov-app-form','ov-settings','ov-detail'];
+  history.pushState({pwa:true}, '');
+  window.addEventListener('popstate', () => {
+    history.pushState({pwa:true}, '');
+    for (const id of OVERLAY_CLOSE_ORDER) {
+      const el = document.getElementById(id);
+      if (el?.classList.contains('open')) { el.classList.remove('open'); return; }
+    }
+  });
 
   init();
 </script>
