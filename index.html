@@ -317,6 +317,11 @@
       background: rgba(255,255,255,0.15); color: #fff; border: none;
       font-size: 18px; padding: 6px 12px; border-radius: 20px; cursor: pointer; z-index: 1;
     }
+    .pv-download {
+      position: absolute; top: calc(16px + env(safe-area-inset-top)); left: 16px;
+      background: rgba(255,255,255,0.15); color: #fff; border: none;
+      font-size: 16px; padding: 6px 12px; border-radius: 20px; cursor: pointer; z-index: 1;
+    }
     .pv-nav {
       position: absolute; top: 50%; transform: translateY(-50%);
       background: rgba(255,255,255,0.15); color: #fff; border: none;
@@ -360,7 +365,7 @@
     <button class="fab" onclick="openCustomForm('')">+</button>
   </div>
 
-  <div id="app-frames"></div>
+  <div id="app-frames" style="display:none"></div>
 
 </div>
 
@@ -510,6 +515,7 @@
 <!-- 사진 뷰어 -->
 <div id="ov-photo-view" onclick="if(event.target===this)closePhotoViewer()">
   <button class="pv-close" onclick="closePhotoViewer()">✕</button>
+  <button class="pv-download" onclick="pvDownload()">⬇</button>
   <button class="pv-nav prev" id="pv-prev" onclick="pvNav(-1)">‹</button>
   <img id="photo-viewer-img" alt="">
   <button class="pv-nav next" id="pv-next" onclick="pvNav(1)">›</button>
@@ -558,6 +564,15 @@
       appUrl: 'https://musical-otk.github.io/sinimuni2026/',
       color: '#f06070',
       recordsKey: 'eoduk_records',
+    },
+    {
+      id: 'app_widerstand',
+      name: '비더슈탄트',
+      icon: '',
+      scheduleUrl: 'https://musical-otk.github.io/widerstand2026/schedule.json',
+      appUrl: 'https://musical-otk.github.io/widerstand2026/',
+      color: '#C09870',
+      recordsKey: 'wider_records',
     },
   ];
 
@@ -624,6 +639,7 @@
     currentView = view;
 
     document.getElementById('view-cal').classList.toggle('hidden', view !== 'cal');
+    document.getElementById('app-frames').style.display = view === 'cal' ? 'none' : '';
 
     getApps().forEach(app => {
       const frame = document.getElementById(`frame-${app.id}`);
@@ -1275,6 +1291,14 @@
     document.getElementById('ov-photo-view').classList.add('open');
   }
   function closePhotoViewer() { document.getElementById('ov-photo-view').classList.remove('open'); }
+  function pvDownload() {
+    const src = _pvPhotos[_pvIdx];
+    if (!src) return;
+    const a = document.createElement('a');
+    a.href = src;
+    a.download = `photo_${Date.now()}.jpg`;
+    a.click();
+  }
 
   function pvTouchStart(e) {
     e.preventDefault();
