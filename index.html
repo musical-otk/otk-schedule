@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>관극 스케줄</title>
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="/otk-schedule/icon-192-v2.png">
@@ -554,7 +554,7 @@
     {
       id: 'app_outcasts',
       name: '아웃캐스트',
-      icon: '🎭',
+      icon: '🦌',
       scheduleUrl: 'https://musical-otk.github.io/outcasts2026/schedule.json',
       appUrl: 'https://musical-otk.github.io/outcasts2026/',
       color: '#7aacff',
@@ -563,7 +563,7 @@
     {
       id: 'app_eoduk',
       name: '어둑시니',
-      icon: '👻',
+      icon: '🌕',
       scheduleUrl: 'https://musical-otk.github.io/sinimuni2026/schedule.json',
       appUrl: 'https://musical-otk.github.io/sinimuni2026/',
       color: '#f06070',
@@ -572,7 +572,7 @@
     {
       id: 'app_widerstand',
       name: '비더슈탄트',
-      icon: '✊',
+      icon: '⚔️',
       scheduleUrl: 'https://musical-otk.github.io/widerstand2026/schedule.json',
       appUrl: 'https://musical-otk.github.io/widerstand2026/',
       color: '#C09870',
@@ -581,7 +581,7 @@
     {
       id: 'app_dive',
       name: '다이브',
-      icon: '🌊',
+      icon: '🫧',
       scheduleUrl: 'https://musical-otk.github.io/dive2026/schedule.json',
       appUrl: 'https://musical-otk.github.io/dive2026/',
       color: '#0284c7',
@@ -594,6 +594,18 @@
     catch { return []; }
   }
   function saveApps(list) { localStorage.setItem(APPS_KEY, JSON.stringify(list)); }
+
+  // 이미 추가된 프리셋 앱 중 아이콘이 비어있는 경우만 최신 PRESET_APPS 값으로 채움
+  // (사용자가 직접 바꾼 아이콘은 덮어쓰지 않음)
+  function syncPresetIcons() {
+    const apps = getApps();
+    let changed = false;
+    apps.forEach(app => {
+      const preset = PRESET_APPS.find(p => p.id === app.id);
+      if (preset && !app.icon) { app.icon = preset.icon; changed = true; }
+    });
+    if (changed) saveApps(apps);
+  }
 
   // ── 배우 필드 자동 감지 (date, time 제외) ──
   function getActorFields(record) {
@@ -1085,7 +1097,10 @@
   }
 
   // ── 앱 추가 폼 ──
+  let _presetFormId = null; // 프리셋에서 채운 폼이면 해당 프리셋 id, 직접 추가면 null
+
   function openAppForm() {
+    _presetFormId = null;
     document.getElementById('af-name').value = '';
     document.getElementById('af-icon').value = '';
     document.getElementById('af-schedule-url').value = '';
@@ -1101,7 +1116,7 @@
     const addedIds = new Set(getApps().map(a => a.id));
     document.getElementById('preset-list').innerHTML = PRESET_APPS.map(p => {
       const added = addedIds.has(p.id);
-      return `<div class="preset-item${added ? ' added' : ''}" onclick="addPreset('${p.id}')">
+      return `<div class="preset-item${added ? ' added' : ''}" onclick="fillPresetForm('${p.id}')">
         <div class="preset-dot" style="background:${p.color}"></div>
         <div class="preset-name">${p.name}</div>
         <div class="preset-add">${added ? '추가됨' : '+ 추가'}</div>
@@ -1109,18 +1124,19 @@
     }).join('');
   }
 
-  async function addPreset(id) {
+  // 프리셋 값을 아래 "직접 추가" 폼에 채워서, 아이콘 등을 원하는 대로 바꾼 뒤 저장하게 함
+  function fillPresetForm(id) {
     const preset = PRESET_APPS.find(p => p.id === id);
     if (!preset) return;
-    const apps = getApps();
-    if (apps.find(a => a.id === id)) return;
-    apps.push({...preset});
-    saveApps(apps);
-    try { schedules[id] = await fetch(preset.scheduleUrl).then(r => r.json()); } catch {}
-    renderTabs();
-    renderFrames();
-    renderPresets();
-    renderCalendar();
+    if (getApps().find(a => a.id === id)) return;
+    _presetFormId = id;
+    document.getElementById('af-name').value = preset.name;
+    document.getElementById('af-icon').value = preset.icon;
+    document.getElementById('af-schedule-url').value = preset.scheduleUrl;
+    document.getElementById('af-app-url').value = preset.appUrl;
+    document.getElementById('af-records-key').value = preset.recordsKey || '';
+    renderColorPicker('af-colors', preset.color);
+    document.getElementById('af-name').scrollIntoView({block: 'center', behavior: 'smooth'});
   }
 
   function closeAppForm() {
@@ -1136,7 +1152,7 @@
     const recordsKey  = document.getElementById('af-records-key').value.trim();
     if (!name || !scheduleUrl) { alert('앱 이름과 스케줄 URL을 입력해주세요'); return; }
     const color = document.querySelector('#af-colors .color-swatch.selected')?.dataset.hex || COLOR_PALETTE[0];
-    const id = 'app_' + Date.now();
+    const id = _presetFormId || ('app_' + Date.now());
     const app = { id, name, icon, scheduleUrl, appUrl, color, recordsKey: recordsKey || null };
     const apps = getApps();
     apps.push(app);
@@ -1144,6 +1160,7 @@
     try {
       schedules[id] = await fetch(scheduleUrl).then(r => r.json());
     } catch {}
+    _presetFormId = null;
     renderTabs();
     renderFrames();
     document.getElementById('ov-app-form').classList.remove('open');
@@ -1432,6 +1449,7 @@
     applyTheme(getTheme());
     const t = new Date();
     currentYear = t.getFullYear(); currentMonth = t.getMonth();
+    syncPresetIcons();
     renderTabs();
     renderFrames();
     await migratePhotosToIndexedDB();
