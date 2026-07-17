@@ -48,7 +48,7 @@
     }
 
     #app {
-      max-width: 480px; margin: 0 auto;
+      max-width: 480px; margin: 0 auto; position: relative;
       height: 100dvh; display: flex; flex-direction: column;
     }
 
@@ -104,16 +104,16 @@
     .dow-cell:first-child { color: #c06060; }
     .dow-cell:last-child  { color: var(--sat); }
 
-    .cal-days { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
+    .cal-days { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
     .cal-cell {
       display: flex; flex-direction: column; align-items: center;
-      padding: 5px 2px 4px; border-radius: 8px; min-height: 54px; cursor: default;
+      padding: 6px 3px 6px; border-radius: 8px; min-height: 58px; cursor: default;
     }
     .cal-cell.has-schedule { background: var(--bg2); }
     .cal-cell.clickable    { cursor: pointer; }
     .cal-cell.clickable:active { background: var(--bg3); }
 
-    .date-wrap { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; margin-bottom: 2px; }
+    .date-wrap { width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; margin-bottom: 3px; }
     .date-num  { font-size: 13px; color: var(--text2); font-weight: 500; line-height: 1; }
     .cal-cell.sunday   .date-num { color: #c06060; }
     .cal-cell.saturday .date-num { color: var(--sat); }
@@ -122,20 +122,21 @@
 
     .attended-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--attended); margin-bottom: 2px; }
 
-    .badges { display: flex; flex-direction: column; gap: 1px; align-items: flex-start; width: 100%; padding: 0 2px; }
-    .badge-row { display: flex; align-items: center; gap: 2px; width: 100%; }
-    .badge { font-size: 8px; font-weight: 700; padding: 1px 3px; border-radius: 3px; line-height: 1.5; flex-shrink: 0; }
-    .badge-time { font-size: 8px; color: var(--text2); white-space: nowrap; }
-    .att-chk { font-size: 8px; line-height: 1; flex-shrink: 0; min-width: 11px; text-align: center; }
+    .badges { display: flex; flex-direction: column; gap: 4px; align-items: stretch; width: 100%; padding: 0 2px; }
+    .sess-card { border-radius: 6px; padding: 3px 5px 4px; width: 100%; }
+    .sess-card-top { display: flex; align-items: center; justify-content: space-between; gap: 3px; }
+    .sess-card-time { font-size: 10px; font-weight: 700; line-height: 1.3; }
+    .sess-card-icons { font-size: 9px; line-height: 1; flex-shrink: 0; display: flex; align-items: center; gap: 2px; }
+    .sess-card-name { font-size: 9.5px; font-weight: 600; line-height: 1.35; margin-top: 1px; word-break: keep-all; }
 
     .fab {
-      position: sticky; bottom: 20px; float: right; right: 16px;
+      position: absolute; right: 16px; bottom: calc(20px + env(safe-area-inset-bottom));
       width: 44px; height: 44px; border-radius: 50%;
       background: var(--custom); color: #fff;
       border: none; font-size: 22px; cursor: pointer; line-height: 1;
       display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 3px 14px rgba(0,0,0,0.35); margin: -54px 16px 20px auto;
-      flex-shrink: 0;
+      box-shadow: 0 3px 14px rgba(0,0,0,0.35);
+      z-index: 30;
     }
     .fab:active { opacity: 0.8; }
 
@@ -851,6 +852,7 @@
     const attended = getAttended();
     const custom   = getCustom();
     const apps     = getApps();
+    const notes    = getNotes();
     let html = '';
 
     for (let i = 0; i < first; i++) html += '<div class="cal-cell"></div>';
@@ -873,9 +875,8 @@
       const hasSch = allSess.length > 0 || showC.length > 0;
       const isToday = ds === todayStr;
 
-      const cls = ['cal-cell',
+      const cls = ['cal-cell', 'clickable',
         hasSch      ? 'has-schedule' : '',
-        att||hasSch ? 'clickable'    : '',
         dow === 0   ? 'sunday'       : '',
         dow === 6   ? 'saturday'     : '',
         isToday     ? 'today'        : '',
@@ -883,23 +884,30 @@
 
       const sessBadges = allSess.map(s => {
         const attCnt = dayAtt.filter(r => r.appId === s._app.id && (!r.time || r.time === s.time)).length;
-        const chk    = attCnt >= 2 ? `✅×${attCnt}` : (attCnt === 1 ? '✅' : '');
-        return `<div class="badge-row">
-          <span class="att-chk">${chk}</span>
-          <span class="badge" style="${appStyle(s._app.color)}">${s._app.icon || s._app.name.slice(0,2)}</span>
-          <span class="badge-time">${fmtTime(s.time)}</span>
+        const chk     = attCnt >= 2 ? `✅×${attCnt}` : (attCnt === 1 ? '✅' : '');
+        const hasPic  = (notes[`${s._app.id}__${ds}__${s.time || ''}`]?.photoIds || []).length > 0;
+        return `<div class="sess-card" style="${appStyle(s._app.color)}">
+          <div class="sess-card-top">
+            <span class="sess-card-time">${fmtTime(s.time)}</span>
+            <span class="sess-card-icons">${hasPic ? '📷' : ''}${chk}</span>
+          </div>
+          <div class="sess-card-name">${s._app.icon ? s._app.icon + ' ' : ''}${s._app.name}</div>
         </div>`;
       }).join('');
 
       const customBadges = showC.map(e => {
-        const col = e.color || COLOR_PALETTE[0];
-        return `<div class="badge-row">
-          <span class="att-chk">✅</span>
-          <span class="badge" style="${appStyle(col)}">${e.name.length > 3 ? e.name.slice(0,3)+'…' : e.name}</span>
+        const col    = e.color || COLOR_PALETTE[0];
+        const hasPic = (e.photoIds || []).length > 0;
+        return `<div class="sess-card" style="${appStyle(col)}">
+          <div class="sess-card-top">
+            <span class="sess-card-time">${fmtTime(e.time)}</span>
+            <span class="sess-card-icons">${hasPic ? '📷' : ''}✅</span>
+          </div>
+          <div class="sess-card-name">${e.name}</div>
         </div>`;
       }).join('');
 
-      html += `<div class="${cls}" ${att||hasSch ? `onclick="openDay('${ds}')"` : ''}>
+      html += `<div class="${cls}" onclick="openDay('${ds}')">
         <div class="date-wrap"><span class="date-num">${d}</span></div>
         ${att && !hasSch ? '<div class="attended-dot"></div>' : ''}
         ${hasSch ? `<div class="badges">${sessBadges}${customBadges}</div>` : ''}
