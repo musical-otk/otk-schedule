@@ -40,7 +40,7 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    html, body { height: 100%; }
+    html, body { height: 100%; overscroll-behavior: none; }
     body {
       background: var(--bg1); color: var(--text1);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -305,13 +305,16 @@
       position: fixed; inset: 0; background: rgba(0,0,0,0.96);
       z-index: 400; display: none; flex-direction: column;
       align-items: center; justify-content: center; overflow: hidden;
+      touch-action: none; overscroll-behavior: none;
     }
     #ov-photo-view.open { display: flex; }
     #photo-viewer-img {
       max-width: 100vw; max-height: 100dvh; object-fit: contain;
       touch-action: none; user-select: none; -webkit-user-select: none;
-      transform-origin: center center;
+      transform-origin: center center; cursor: zoom-in;
     }
+    #photo-viewer-img.pv-zoomed { cursor: zoom-out; }
+    #photo-viewer-img.pv-zoom-anim { transition: transform 0.25s ease; }
     .pv-close {
       position: absolute; top: calc(16px + env(safe-area-inset-top)); right: 16px;
       background: rgba(255,255,255,0.15); color: #fff; border: none;
@@ -573,6 +576,15 @@
       appUrl: 'https://musical-otk.github.io/widerstand2026/',
       color: '#C09870',
       recordsKey: 'wider_records',
+    },
+    {
+      id: 'app_dive',
+      name: '다이브',
+      icon: '',
+      scheduleUrl: 'https://musical-otk.github.io/dive2026/schedule.json',
+      appUrl: 'https://musical-otk.github.io/dive2026/',
+      color: '#0284c7',
+      recordsKey: 'dive_records',
     },
   ];
 
@@ -1259,10 +1271,46 @@
   let _dayNotePhotos = {}; // noteKey → photos[], populated in openDay
   const _pv = { scale: 1, x: 0, y: 0, startDist: 0, startScale: 1, startX: 0, startY: 0, lastTap: 0 };
 
+  function pvClampPan() {
+    const img = document.getElementById('photo-viewer-img');
+    const nw = img.naturalWidth, nh = img.naturalHeight;
+    if (!nw || !nh) return;
+    const box = document.getElementById('ov-photo-view');
+    const vw = box.clientWidth, vh = box.clientHeight;
+    const containScale = Math.min(1, vw / nw, vh / nh);
+    const scaledW = nw * containScale * _pv.scale;
+    const scaledH = nh * containScale * _pv.scale;
+    const maxX = Math.max(0, (scaledW - vw) / 2);
+    const maxY = Math.max(0, (scaledH - vh) / 2);
+    _pv.x = Math.min(maxX, Math.max(-maxX, _pv.x));
+    _pv.y = Math.min(maxY, Math.max(-maxY, _pv.y));
+  }
   function pvApply() {
-    document.getElementById('photo-viewer-img').style.transform = `translate(${_pv.x}px,${_pv.y}px) scale(${_pv.scale})`;
+    const img = document.getElementById('photo-viewer-img');
+    pvClampPan();
+    img.style.transform = `translate(${_pv.x}px,${_pv.y}px) scale(${_pv.scale})`;
+    img.classList.toggle('pv-zoomed', _pv.scale > 1);
   }
   function pvReset() { _pv.scale = 1; _pv.x = 0; _pv.y = 0; pvApply(); }
+  function pvFitWidthScale() {
+    const img = document.getElementById('photo-viewer-img');
+    const nw = img.naturalWidth, nh = img.naturalHeight;
+    if (!nw || !nh) return 2.5;
+    const box = document.getElementById('ov-photo-view');
+    const vw = box.clientWidth, vh = box.clientHeight;
+    const containScale  = Math.min(1, vw / nw, vh / nh);
+    const renderedWidth = nw * containScale;
+    if (!renderedWidth) return 2.5;
+    return Math.min(6, Math.max(1, vw / renderedWidth));
+  }
+  function pvToggleZoom() {
+    const img = document.getElementById('photo-viewer-img');
+    img.classList.add('pv-zoom-anim');
+    _pv.scale = _pv.scale > 1 ? 1 : pvFitWidthScale();
+    _pv.x = 0; _pv.y = 0;
+    pvApply();
+    setTimeout(() => img.classList.remove('pv-zoom-anim'), 250);
+  }
 
   function pvNav(dir) {
     _pvIdx = (_pvIdx + dir + _pvPhotos.length) % _pvPhotos.length;
@@ -1309,7 +1357,7 @@
       _pv.startX = e.touches[0].clientX - _pv.x;
       _pv.startY = e.touches[0].clientY - _pv.y;
       const now = Date.now();
-      if (now - _pv.lastTap < 280) { _pv.scale = _pv.scale > 1 ? 1 : 2.5; _pv.x = 0; _pv.y = 0; pvApply(); }
+      if (now - _pv.lastTap < 280) pvToggleZoom();
       _pv.lastTap = now;
     }
   }
@@ -1397,6 +1445,7 @@
   _pvImg.addEventListener('touchstart', pvTouchStart, {passive: false});
   _pvImg.addEventListener('touchmove',  pvTouchMove,  {passive: false});
   _pvImg.addEventListener('touchend',   pvTouchEnd,   {passive: false});
+  _pvImg.addEventListener('dblclick', (e) => { e.stopPropagation(); pvToggleZoom(); });
 
   // 뒤로가기 버튼: 오버레이 닫기 (PWA 앱 종료 방지)
   const OVERLAY_CLOSE_ORDER = ['ov-photo-view','ov-note','ov-custom','ov-app-form','ov-settings','ov-detail'];
