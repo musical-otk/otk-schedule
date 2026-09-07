@@ -49,7 +49,10 @@
 
     #app {
       max-width: 480px; margin: 0 auto; position: relative;
-      height: 100dvh; display: flex; flex-direction: column;
+      /* 100dvh 는 주소창이 다시 나타난 뒤 값이 갱신되지 않아 위아래 여백이 남는다.
+         JS 가 실제 innerHeight 를 --app-h 로 넣어주고, 그 전까지는 dvh 로 버틴다. */
+      height: var(--app-h, 100dvh);
+      display: flex; flex-direction: column;
     }
 
     .header {
@@ -79,6 +82,17 @@
       transition: all 0.15s;
     }
     .app-btn:active { opacity: 0.7; }
+    .app-btn-more { color: var(--text3); border-style: dashed; }
+
+    .app-list-note { font-size: 10px; color: var(--text3); font-weight: 500; margin-top: 2px; }
+    .app-list-eye, .app-list-mini {
+      background: none; border: 1px solid var(--border); color: var(--text3);
+      font-size: 12px; cursor: pointer; padding: 4px 7px; border-radius: 8px;
+      line-height: 1; flex-shrink: 0;
+    }
+    .app-list-eye.on { border-color: transparent; }
+    .app-list-eye:active, .app-list-mini:active { background: var(--bg3); }
+    .preset-date { font-size: 10px; color: var(--text3); margin-right: 6px; flex-shrink: 0; }
 
     #view-cal { flex: 1; overflow-y: auto; }
     #view-cal.hidden { display: none; }
@@ -589,6 +603,69 @@
     },
   ];
 
+  // ── 프리셋 자동 발견 ──
+  // 새 작품을 만들 때마다 PRESET_APPS 를 손으로 고쳐야 했다.
+  // musical-otk 계정의 저장소를 훑어 schedule.json 이 있는 것을 프리셋 후보로 만든다.
+  // (musical-otk 은 조직이 아니라 사용자 계정이라 /users 를 쓴다. /orgs 는 404)
+  const ORG = 'musical-otk';
+  const NON_DIARY = ['admin', 'sample', 'otk-schedule', '.github'];
+  const DISCOVERED_KEY = 'hub_discovered';
+  const PALETTE_FALLBACK = ['#7aacff','#f06070','#C09870','#0284c7','#1A6B72','#8B1A1A','#7B3FC4','#4CAF50'];
+
+  function getDiscovered() {
+    try { return JSON.parse(localStorage.getItem(DISCOVERED_KEY)) || []; }
+    catch { return []; }
+  }
+
+  async function discoverApps(silent) {
+    try {
+      const res = await fetch(`https://api.github.com/users/${ORG}/repos?per_page=100&sort=updated`);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const repos = await res.json();
+      const cands = repos
+        .map(r => r.name)
+        .filter(n => !n.startsWith('_') && !NON_DIARY.includes(n));
+
+      // schedule.json 이 실제로 있는 저장소만 남긴다
+      const found = [];
+      await Promise.all(cands.map(async (name, i) => {
+        const url = `https://${ORG}.github.io/${name}/schedule.json`;
+        try {
+          const r = await fetch(url, { method: 'GET', cache: 'no-cache' });
+          if (!r.ok) return;
+          const rows = await r.json();
+          if (!Array.isArray(rows) || !rows.length) return;
+          const last = rows.reduce((m, x) => (x.date && x.date > m ? x.date : m), '');
+          found.push({
+            id: 'app_' + name.replace(/[^a-z0-9]/gi, '_'),
+            name, icon: '', scheduleUrl: url,
+            appUrl: `https://${ORG}.github.io/${name}/`,
+            color: PALETTE_FALLBACK[i % PALETTE_FALLBACK.length],
+            recordsKey: null,
+            lastDate: last
+          });
+        } catch {}
+      }));
+
+      found.sort((a, b) => (b.lastDate || '').localeCompare(a.lastDate || ''));
+      localStorage.setItem(DISCOVERED_KEY, JSON.stringify(found));
+      if (!silent) renderPresetList();
+      return found;
+    } catch (e) {
+      if (!silent) alert('저장소 목록을 불러오지 못했습니다: ' + e.message);
+      return getDiscovered();
+    }
+  }
+
+  // 코드에 박힌 프리셋 + 자동 발견분을 합친다. 코드 쪽 값(아이콘·색)이 우선.
+  function allPresets() {
+    const merged = PRESET_APPS.slice();
+    getDiscovered().forEach(d => {
+      if (!merged.some(p => p.scheduleUrl === d.scheduleUrl)) merged.push(d);
+    });
+    return merged;
+  }
+
   function getApps() {
     try { return JSON.parse(localStorage.getItem(APPS_KEY)) || []; }
     catch { return []; }
@@ -607,6 +684,54 @@
     if (changed) saveApps(apps);
   }
 
+  // 저장된 아이콘이 프리셋과 달라도 자동으로 덮어쓰지는 않는다.
+  // 대신 설정에서 '되돌리기'를 누를 때만 맞춘다.
+  function presetIconOf(id) {
+    const p = PRESET_APPS.find(x => x.id === id);
+    return p ? p.icon : null;
+  }
+  function resetIconToPreset(id) {
+    const apps = getApps();
+    const app = apps.find(a => a.id === id);
+    const icon = presetIconOf(id);
+    if (!app || !icon) return;
+    app.icon = icon;
+    saveApps(apps);
+    renderSettingsAppList(); renderTabs();
+  }
+
+  // ── 탭 숨기기 ──
+  // 공연이 끝난 앱은 자동으로 가로탭에서 빠진다. 데이터는 그대로 남는다.
+  // 설정에서 앱별로 '항상 표시' / '항상 숨김' 을 지정하면 자동 판정보다 우선한다.
+  const HIDDEN_KEY = 'hub_tab_visibility';   // { [appId]: 'show' | 'hide' }
+  function getVisibility() {
+    try { return JSON.parse(localStorage.getItem(HIDDEN_KEY)) || {}; }
+    catch { return {}; }
+  }
+  function setVisibility(id, mode) {
+    const v = getVisibility();
+    if (mode === 'auto') delete v[id]; else v[id] = mode;
+    localStorage.setItem(HIDDEN_KEY, JSON.stringify(v));
+    renderTabs(); renderSettingsAppList();
+  }
+
+  // 스케줄의 마지막 날짜가 오늘보다 이전이면 '끝난 공연'
+  function lastShowDate(appId) {
+    const rows = schedules[appId];
+    if (!Array.isArray(rows) || !rows.length) return null;
+    return rows.reduce((m, r) => (r.date && r.date > m ? r.date : m), '');
+  }
+  function isFinished(appId) {
+    const last = lastShowDate(appId);
+    return !!last && last < todayStr;
+  }
+  function isTabVisible(app) {
+    const mode = getVisibility()[app.id];
+    if (mode === 'show') return true;
+    if (mode === 'hide') return false;
+    return !isFinished(app.id);          // 자동
+  }
+
   // ── 배우 필드 자동 감지 (date, time 제외) ──
   function getActorFields(record) {
     return Object.keys(record).filter(k => k !== 'date' && k !== 'time' && !k.startsWith('_'));
@@ -614,9 +739,13 @@
 
   // ── 탭 렌더링 ──
   function renderTabs() {
-    document.getElementById('app-tabs').innerHTML = getApps().map(app =>
-      `<button class="app-btn" id="btn-${app.id}" onclick="switchView('${app.id}')">${app.icon ? app.icon + ' ' : ''}${app.name}</button>`
-    ).join('');
+    const visible = getApps().filter(isTabVisible);
+    const hiddenCount = getApps().length - visible.length;
+    document.getElementById('app-tabs').innerHTML =
+      visible.map(app =>
+        `<button class="app-btn" id="btn-${app.id}" onclick="switchView('${app.id}')">${app.icon ? app.icon + ' ' : ''}${app.name}</button>`
+      ).join('') +
+      (hiddenCount ? `<button class="app-btn app-btn-more" onclick="openSettings()" title="설정에서 표시 여부를 바꿀 수 있습니다">+${hiddenCount}</button>` : '');
   }
 
   // ── iframe 렌더링 ──
@@ -658,6 +787,21 @@
   let currentView = 'cal';
   const todayStr = new Date().toISOString().slice(0, 10);
 
+  // ── 화면 높이 동기화 ──
+  // 앱 탭(iframe)에 들어갔다 나오면 모바일 주소창이 다시 나타나면서
+  // 100dvh 가 실제 보이는 높이보다 커져 위아래 여백이 생긴다.
+  // 실제 innerHeight 를 --app-h 로 넣어 항상 화면에 맞춘다.
+  function syncAppHeight() {
+    document.documentElement.style.setProperty('--app-h', window.innerHeight + 'px');
+  }
+  addEventListener('resize', syncAppHeight);
+  addEventListener('orientationchange', () => setTimeout(syncAppHeight, 200));
+  addEventListener('pageshow', syncAppHeight);
+  if (window.visualViewport) {
+    visualViewport.addEventListener('resize', syncAppHeight);
+  }
+  syncAppHeight();
+
   // ── 뷰 전환 ──
   function switchView(view) {
     if (currentView === view) { switchView('cal'); return; }
@@ -665,6 +809,10 @@
 
     document.getElementById('view-cal').classList.toggle('hidden', view !== 'cal');
     document.getElementById('app-frames').style.display = view === 'cal' ? 'none' : '';
+
+    // 앱 탭 왕복 뒤 주소창 상태가 바뀌어 있을 수 있다
+    syncAppHeight();
+    setTimeout(syncAppHeight, 300);
 
     getApps().forEach(app => {
       const frame = document.getElementById(`frame-${app.id}`);
@@ -1044,14 +1192,43 @@
 
   function renderSettingsAppList() {
     const apps = getApps();
+    const vis  = getVisibility();
     document.getElementById('app-list-ui').innerHTML = apps.length
-      ? apps.map(app => `
+      ? apps.map(app => {
+          const mode     = vis[app.id] || 'auto';
+          const finished = isFinished(app.id);
+          const shown    = isTabVisible(app);
+          const last     = lastShowDate(app.id);
+          const preset   = presetIconOf(app.id);
+          const iconOff  = preset && app.icon !== preset;
+
+          const note = mode === 'show' ? '항상 표시'
+                     : mode === 'hide' ? '항상 숨김'
+                     : finished ? `공연 종료 (~${last}) · 자동 숨김`
+                     : last ? `~${last}` : '스케줄 없음';
+
+          return `
         <div class="app-list-item">
           <div class="app-list-dot" style="background:${app.color}"></div>
-          <div class="app-list-name">${app.icon ? app.icon + ' ' : ''}${app.name}</div>
+          <div class="app-list-name">
+            ${app.icon ? app.icon + ' ' : ''}${app.name}
+            <div class="app-list-note">${note}</div>
+          </div>
+          ${iconOff ? `<button class="app-list-mini" title="프리셋 아이콘(${preset})으로 되돌리기"
+              onclick="resetIconToPreset('${app.id}')">${preset}↩</button>` : ''}
+          <button class="app-list-eye${shown ? ' on' : ''}"
+                  title="가로탭 표시 · 자동/표시/숨김 순환"
+                  onclick="cycleVisibility('${app.id}')">${shown ? '👁' : '🚫'}</button>
           <button class="app-list-del" onclick="deleteApp('${app.id}')">✕</button>
-        </div>`).join('')
+        </div>`;
+        }).join('')
       : '<div style="font-size:12px;color:var(--text3);padding:6px 0">등록된 앱이 없습니다</div>';
+  }
+
+  // 자동 → 항상 표시 → 항상 숨김 → 자동
+  function cycleVisibility(id) {
+    const cur = getVisibility()[id] || 'auto';
+    setVisibility(id, cur === 'auto' ? 'show' : cur === 'show' ? 'hide' : 'auto');
   }
 
   function renderActorFilters() {
@@ -1112,23 +1289,34 @@
     document.getElementById('ov-app-form').classList.add('open');
   }
 
-  function renderPresets() {
-    const addedIds = new Set(getApps().map(a => a.id));
-    document.getElementById('preset-list').innerHTML = PRESET_APPS.map(p => {
-      const added = addedIds.has(p.id);
-      return `<div class="preset-item${added ? ' added' : ''}" onclick="fillPresetForm('${p.id}')">
+  function renderPresets() { renderPresetList(); }
+
+  function renderPresetList() {
+    const added = new Set(getApps().map(a => a.scheduleUrl));
+    const list  = allPresets();
+    const rows  = list.map(p => {
+      const isAdded = added.has(p.scheduleUrl);
+      const tail = p.lastDate
+        ? `<div class="preset-date">${p.lastDate < todayStr ? '종료 ' : '~'}${p.lastDate}</div>`
+        : '';
+      return `<div class="preset-item${isAdded ? ' added' : ''}" onclick="fillPresetForm('${p.id}')">
         <div class="preset-dot" style="background:${p.color}"></div>
-        <div class="preset-name">${p.name}</div>
-        <div class="preset-add">${added ? '추가됨' : '+ 추가'}</div>
+        <div class="preset-name">${p.icon ? p.icon + ' ' : ''}${p.name}</div>
+        ${tail}
+        <div class="preset-add">${isAdded ? '추가됨' : '+ 추가'}</div>
       </div>`;
     }).join('');
+    document.getElementById('preset-list').innerHTML = rows +
+      `<button class="add-app-btn" style="margin-top:8px" onclick="discoverApps(false)">
+        🔄 저장소에서 새 작품 찾기
+      </button>`;
   }
 
   // 프리셋 값을 아래 "직접 추가" 폼에 채워서, 아이콘 등을 원하는 대로 바꾼 뒤 저장하게 함
   function fillPresetForm(id) {
-    const preset = PRESET_APPS.find(p => p.id === id);
+    const preset = allPresets().find(p => p.id === id);
     if (!preset) return;
-    if (getApps().find(a => a.id === id)) return;
+    if (getApps().find(a => a.scheduleUrl === preset.scheduleUrl)) return;
     _presetFormId = id;
     document.getElementById('af-name').value = preset.name;
     document.getElementById('af-icon').value = preset.icon;
@@ -1458,12 +1646,30 @@
       document.getElementById('status').textContent = '⚙️ 설정에서 앱을 추가해 주세요';
       return;
     }
+    // 스케줄 로드 실패를 조용히 삼키지 않는다. 어떤 앱이 안 떴는지 알려준다.
+    const failed = [];
     await Promise.all(apps.map(async app => {
-      try { schedules[app.id] = await fetch(app.scheduleUrl).then(r => r.json()); }
-      catch {}
+      try {
+        const r = await fetch(app.scheduleUrl);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        schedules[app.id] = await r.json();
+      } catch (e) {
+        failed.push(`${app.name}(${e.message})`);
+      }
     }));
-    document.getElementById('status').style.display = 'none';
+
+    const status = document.getElementById('status');
+    if (failed.length) {
+      status.textContent = `⚠️ 스케줄을 못 불러온 앱: ${failed.join(', ')}`;
+      status.style.display = '';
+    } else {
+      status.style.display = 'none';
+    }
+
+    renderTabs();          // 스케줄이 있어야 '공연 종료' 판정이 되므로 다시 그린다
     renderCalendar();
+
+    discoverApps(true);    // 새 작품 자동 발견 (백그라운드, 실패해도 조용히)
   }
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/otk-schedule/sw.js');
