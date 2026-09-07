@@ -373,6 +373,12 @@
       cursor: pointer; color: var(--text2);
     }
     .note-memo-snip { font-size: 11px; color: var(--text3); flex: 1; white-space: pre-wrap; word-break: break-all; max-height: 32px; overflow: hidden; }
+    .jump-btn {
+      background: none; border: 1px solid var(--border); color: var(--text2);
+      font-size: 11px; font-weight: 700; font-family: inherit; cursor: pointer;
+      padding: 6px 10px; border-radius: 8px; white-space: nowrap; flex-shrink: 0;
+    }
+    .jump-btn:active { background: var(--bg3); }
     .note-add-btn {
       font-size: 11px; color: var(--text3); background: none;
       border: 1px solid var(--border); border-radius: 12px; padding: 4px 10px;
@@ -664,6 +670,7 @@
       appUrl: 'https://musical-otk.github.io/outcasts2026/',
       color: '#7aacff',
       recordsKey: 'outcasts_records',
+      deepLink: false,   // ?date= 처리가 없는 구버전 앱
     },
     {
       id: 'app_eoduk',
@@ -673,6 +680,7 @@
       appUrl: 'https://musical-otk.github.io/sinimuni2026/',
       color: '#f06070',
       recordsKey: 'eoduk_records',
+      deepLink: false,   // ?date= 처리가 없는 구버전 앱
     },
     {
       id: 'app_widerstand',
@@ -770,7 +778,11 @@
     let changed = false;
     apps.forEach(app => {
       const preset = PRESET_APPS.find(p => p.id === app.id);
-      if (preset && !app.icon) { app.icon = preset.icon; changed = true; }
+      if (!preset) return;
+      if (!app.icon) { app.icon = preset.icon; changed = true; }
+      // deepLink 는 앱이 ?date= 를 읽을 수 있느냐는 사실이라 사용자가 고르는 값이 아니다.
+      // 아이콘·색과 달리 프리셋 값을 그대로 따라간다.
+      if (app.deepLink !== preset.deepLink) { app.deepLink = preset.deepLink; changed = true; }
     });
     if (changed) saveApps(apps);
   }
@@ -901,6 +913,26 @@
     visualViewport.addEventListener('resize', syncAppHeight);
   }
   syncAppHeight();
+
+  // ── 앱으로 점프 ──
+  // 앱이 ?date=&time= 을 읽어 그 회차의 기록을 연다.
+  // 아웃캐스트·어둑시니는 그 처리가 없어서 버튼을 띄우지 않는다(deepLink:false).
+  // 새로 만드는 작품은 기본으로 지원한다고 본다.
+  function canJump(app) {
+    return !!(app && app.appUrl && app.deepLink !== false);
+  }
+
+  function jumpToApp(appId, ds, time) {
+    const app = getApps().find(a => a.id === appId);
+    if (!canJump(app)) return;
+    const q = `date=${encodeURIComponent(ds)}` + (time ? `&time=${encodeURIComponent(time)}` : '');
+    const frame = document.getElementById(`frame-${appId}`);
+    if (frame) frame.src = app.appUrl + (app.appUrl.includes('?') ? '&' : '?') + q;
+    document.getElementById('ov-detail').classList.remove('open');
+    // 이미 그 탭이 열려 있으면 switchView 가 달력으로 되돌려 버린다
+    currentView = null;
+    switchView(appId);
+  }
 
   // ── 뷰 전환 ──
   // 달력 = 페이지 스크롤 / iframe = 화면 높이 고정.
@@ -1308,10 +1340,15 @@
         `<div class="note-thumb-wrap"><img class="note-thumb" src="${src}" data-key="${noteKey}" data-idx="${i}"></div>`
       ).join('');
       const memoSnip = note.memo ? `<span class="note-memo-snip">${note.memo.slice(0,40)}</span>` : '';
+      // 좌석도처럼 앱에만 있는 것들은 허브로 끌고 오지 않고 앱으로 보낸다.
+      const jumpBtn = canJump(s._app)
+        ? `<button class="jump-btn" onclick="jumpToApp('${s._app.id}','${ds}','${s.time || ''}')">${s._app.name}에서 보기 ›</button>`
+        : '';
       const noteRow = `<div class="note-row">
         ${thumbsHtml}
         ${memoSnip}
         <button class="note-add-btn" onclick="openNoteForm('${noteKey}','${s._app.name.replace(/'/g,'\\\'')}')">${(photos.length||note.memo) ? '✏️ 수정' : '+ 메모/사진'}</button>
+        ${jumpBtn}
       </div>`;
       return `<div class="session-row">
         <div class="session-time">${s.time}</div>
