@@ -49,14 +49,19 @@
 
     #app {
       max-width: 480px; margin: 0 auto; position: relative;
-      /* 100dvh 는 주소창이 다시 나타난 뒤 값이 갱신되지 않아 위아래 여백이 남는다.
-         JS 가 실제 innerHeight 를 --app-h 로 넣어주고, 그 전까지는 dvh 로 버틴다. */
-      height: var(--app-h, 100dvh);
+      /* 달력은 페이지 자체가 스크롤된다. 영역 안에서 스크롤되면
+         주소창이 접히지 않아 보이는 높이가 계속 좁아진다. */
+      min-height: var(--app-h, 100dvh);
       display: flex; flex-direction: column;
+    }
+    /* iframe 을 띄울 때만 화면 높이에 고정한다. */
+    #app.frame-mode {
+      height: var(--app-h, 100dvh); min-height: 0; overflow: hidden;
     }
 
     .header {
       flex-shrink: 0;
+      position: sticky; top: 0; z-index: 20;
       background: var(--bg1); border-bottom: 1px solid var(--border);
       display: flex; align-items: center; gap: 6px;
       padding: 10px 12px;
@@ -92,12 +97,36 @@
     }
     .app-list-eye.on { border-color: transparent; }
     .app-list-eye:active, .app-list-mini:active { background: var(--bg3); }
+
+    /* 아이콘 대신 현재 상태를 글자로 적는 버튼 */
+    .app-list-vis {
+      border: 1px solid var(--border); background: none; color: var(--text3);
+      font-size: 11px; font-weight: 700; font-family: inherit; cursor: pointer;
+      padding: 5px 9px; border-radius: 8px; line-height: 1; flex-shrink: 0;
+      min-width: 42px; transition: all 0.15s;
+    }
+    .app-list-vis:active { background: var(--bg3); }
+    .app-list-vis.mode-show { color: var(--custom); border-color: var(--custom-bd); background: var(--custom-bg); }
+    .app-list-vis.mode-hide { color: var(--text3); border-style: dashed; }
+
+    /* 종료된 공연 접기 머리 */
+    .app-group {
+      display: flex; align-items: center; justify-content: space-between; width: 100%;
+      background: none; border: none; border-top: 1px solid var(--border);
+      color: var(--text3); font-size: 12px; font-weight: 700; font-family: inherit;
+      cursor: pointer; padding: 10px 2px 8px; margin-top: 6px;
+    }
+    .app-group:active { color: var(--text2); }
+    .app-group-caret { font-size: 11px; }
     .preset-date { font-size: 10px; color: var(--text3); margin-right: 6px; flex-shrink: 0; }
 
-    #view-cal { flex: 1; overflow-y: auto; }
+    #view-cal { flex: 1; }
     #view-cal.hidden { display: none; }
 
-    #app-frames { flex: 1; position: relative; }
+    /* 기본은 숨김. 켜져 있으면 flex:1 로 달력과 화면을 반씩 나눠 가져
+       달력이 중간에서 잘린다. */
+    #app-frames { display: none; position: relative; }
+    #app-frames.active { display: block; flex: 1; }
     .app-frame { position: absolute; inset: 0; border: none; display: none; width: 100%; height: 100%; }
     .app-frame.active { display: block; }
 
@@ -111,6 +140,16 @@
     }
     .nav-btn:active { background: var(--bg3); }
     .cal-month { font-size: 17px; font-weight: 700; }
+
+    .cal-seg { display: flex; gap: 6px; padding: 0 12px 10px; }
+    .seg-btn {
+      flex: 1; padding: 7px 6px; border-radius: 9px; cursor: pointer;
+      font-size: 12px; font-weight: 700; font-family: inherit;
+      border: 1px solid var(--border); background: none; color: var(--text3);
+      transition: all 0.15s;
+    }
+    .seg-btn.on { background: var(--custom-bg); border-color: var(--custom-bd); color: var(--custom); }
+    .seg-btn:active { opacity: 0.7; }
 
     .cal-grid { padding: 0 10px 24px; }
     .cal-dow { display: grid; grid-template-columns: repeat(7,1fr); margin-bottom: 4px; }
@@ -136,15 +175,36 @@
 
     .attended-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--attended); margin-bottom: 2px; }
 
-    .badges { display: flex; flex-direction: column; gap: 4px; align-items: stretch; width: 100%; padding: 0 2px; min-width: 0; }
-    .sess-card { border-radius: 6px; padding: 3px 5px 4px; width: 100%; min-width: 0; overflow: hidden; }
-    .sess-card-top { display: flex; align-items: center; justify-content: space-between; gap: 3px; min-width: 0; }
-    .sess-card-time { font-size: 9px; font-weight: 700; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .sess-card-icons { font-size: 8px; line-height: 1; flex-shrink: 0; }
-    .sess-card-name { font-size: 8.5px; font-weight: 600; line-height: 1.35; margin-top: 1px; word-break: keep-all; }
+    .badges { display: flex; flex-direction: column; gap: 3px; align-items: stretch; width: 100%; padding: 0 2px; min-width: 0; }
+
+    /* 관람/예매한 회차만 칩으로 강조한다. 작품명 대신 색으로 구분하므로
+       한 줄이면 충분하다. 예전엔 3줄이라 하루 4회차에 카드만 12줄이었다. */
+    .sess-card {
+      border-radius: 6px; padding: 2px 4px; width: 100%; min-width: 0; overflow: hidden;
+      display: flex; align-items: center; gap: 3px;
+    }
+    .sess-card-time { font-size: 9px; font-weight: 800; line-height: 1.4; letter-spacing: -0.3px;
+                      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sess-card-icons { font-size: 8px; line-height: 1; flex-shrink: 0; margin-left: auto; }
+
+    /* 안 가는 회차 — 회차가 적으면 시각을 그대로 적는다. */
+    .sess-dim { display: flex; align-items: center; gap: 3px; padding: 0 2px; min-width: 0;
+                font-size: 8.5px; font-weight: 600; line-height: 1.5; color: var(--text3); }
+    .sess-dim i { width: 3px; height: 7px; border-radius: 1px; flex-shrink: 0; display: block; }
+    .sess-dim span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* 회차가 몰린 날만 시간 축으로 접는다. 눈금의 좌우 위치가 곧 시각. */
+    .sess-axis { position: relative; height: 10px; width: 100%; margin-top: 1px;
+                 border-top: 1px solid var(--border); }
+    .sess-axis i { position: absolute; top: 2px; width: 3px; height: 6px; border-radius: 1px;
+                   transform: translateX(-50%); display: block; }
+    .axis-legend { font-size: 8px; color: var(--text3); text-align: center;
+                   padding: 6px 0 0; letter-spacing: 0.2px; }
 
     .fab {
-      position: absolute; right: 16px; bottom: calc(20px + env(safe-area-inset-bottom));
+      /* 페이지가 스크롤되므로 fixed. 480px 폭 기준으로 오른쪽에 붙인다. */
+      position: fixed; right: max(16px, calc(50% - 240px + 16px));
+      bottom: calc(20px + env(safe-area-inset-bottom));
       width: 44px; height: 44px; border-radius: 50%;
       background: var(--custom); color: #fff;
       border: none; font-size: 22px; cursor: pointer; line-height: 1;
@@ -155,6 +215,22 @@
     .fab:active { opacity: 0.8; }
 
     .loading { text-align: center; padding: 48px 16px; color: var(--text3); font-size: 13px; }
+
+    .toast {
+      position: fixed; left: 50%; transform: translateX(-50%) translateY(12px);
+      bottom: calc(24px + env(safe-area-inset-bottom));
+      background: var(--bg3); color: var(--text1); border: 1px solid var(--border);
+      padding: 9px 16px; border-radius: 20px; font-size: 12px; font-weight: 600;
+      max-width: 88vw; text-align: center; z-index: 40;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* 이모지 🔄 는 색이 제멋대로라 옆의 ☀️ ⚙️ 와 따로 놀았다. currentColor 를 따르는 선 아이콘. */
+    .hbtn-icon { display: inline-flex; align-items: center; justify-content: center; padding: 6px; }
+    .hbtn-icon svg { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hbtn-icon.spinning svg { animation: spin 0.8s linear infinite; }
 
     .overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.48);
@@ -359,6 +435,10 @@
 
   <div class="header">
     <div class="header-title" onclick="goToToday()">관극 스케줄</div>
+    <button class="hbtn hbtn-icon" id="sync-btn" aria-label="동기화"
+            title="각 앱의 관람 기록과 스케줄 다시 읽기" onclick="syncNow()"><svg viewBox="0 0 24 24" width="16" height="16" fill="none"
+           stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"
+      ><path d="M20.5 12a8.5 8.5 0 1 1-2.49-6.01"/><polyline points="20.5 4 20.5 9.5 15 9.5"/></svg></button>
     <button class="hbtn" id="theme-btn" onclick="toggleTheme()">☀️</button>
     <button class="hbtn" onclick="openSettings()">⚙️</button>
     <div id="app-tabs"></div>
@@ -370,6 +450,10 @@
       <div class="cal-month" id="cal-month-label"></div>
       <button class="nav-btn" onclick="changeMonth(1)">›</button>
     </div>
+    <div class="cal-seg">
+      <button class="seg-btn" id="seg-mine" onclick="setCalMode('mine')">내 기록</button>
+      <button class="seg-btn" id="seg-all"  onclick="setCalMode('all')">전체 회차</button>
+    </div>
     <div class="cal-grid">
       <div class="cal-dow">
         <div class="dow-cell">일</div><div class="dow-cell">월</div>
@@ -378,12 +462,14 @@
         <div class="dow-cell">토</div>
       </div>
       <div class="cal-days" id="cal-days"></div>
+      <div class="axis-legend" id="axis-legend" style="display:none"></div>
     </div>
     <div id="status" class="loading">스케줄 불러오는 중…</div>
+    <div id="toast" class="toast"></div>
     <button class="fab" onclick="openCustomForm('')">+</button>
   </div>
 
-  <div id="app-frames" style="display:none"></div>
+  <div id="app-frames"></div>
 
 </div>
 
@@ -686,18 +772,24 @@
 
   // 저장된 아이콘이 프리셋과 달라도 자동으로 덮어쓰지는 않는다.
   // 대신 설정에서 '되돌리기'를 누를 때만 맞춘다.
+  function presetOf(id) {
+    return allPresets().find(x => x.id === id) || null;
+  }
   function presetIconOf(id) {
-    const p = PRESET_APPS.find(x => x.id === id);
+    const p = presetOf(id);
     return p ? p.icon : null;
   }
+  // 색도 함께 되돌린다. 프리셋 색이 팔레트에 없어서 저장할 때 기본 파란색으로
+  // 떨어진 앱들이 이미 있고, 그건 아이콘과 달리 사용자가 고른 값이 아니다.
   function resetIconToPreset(id) {
     const apps = getApps();
-    const app = apps.find(a => a.id === id);
-    const icon = presetIconOf(id);
-    if (!app || !icon) return;
-    app.icon = icon;
+    const app  = apps.find(a => a.id === id);
+    const p    = presetOf(id);
+    if (!app || !p) return;
+    if (p.icon)  app.icon  = p.icon;
+    if (p.color) app.color = p.color;
     saveApps(apps);
-    renderSettingsAppList(); renderTabs();
+    renderSettingsAppList(); renderTabs(); renderCalendar();
   }
 
   // ── 탭 숨기기 ──
@@ -775,7 +867,10 @@
 
   function renderColorPicker(containerId, selectedHex) {
     const hex = selectedHex || COLOR_PALETTE[0];
-    document.getElementById(containerId).innerHTML = COLOR_PALETTE.map(c =>
+    // 프리셋 색(#C09870 등)은 팔레트에 없다. 그대로 두면 아무 칸도 선택되지 않아
+    // 저장할 때 COLOR_PALETTE[0] 으로 떨어지고, 모든 앱이 같은 색이 된다.
+    const palette = COLOR_PALETTE.includes(hex) ? COLOR_PALETTE : [hex, ...COLOR_PALETTE];
+    document.getElementById(containerId).innerHTML = palette.map(c =>
       `<div class="color-swatch${c === hex ? ' selected' : ''}" style="background:${c}"
         data-hex="${c}" onclick="selectColorSwatch(this)"></div>`
     ).join('');
@@ -803,16 +898,26 @@
   syncAppHeight();
 
   // ── 뷰 전환 ──
+  // 달력 = 페이지 스크롤 / iframe = 화면 높이 고정.
+  // 한 곳에서만 켜고 꺼야 초기 로드나 goToToday 에서 빠지지 않는다.
+  function setFrameMode(on) {
+    document.getElementById('app').classList.toggle('frame-mode', on);
+    document.getElementById('app-frames').classList.toggle('active', on);
+    document.getElementById('view-cal').classList.toggle('hidden', on);
+  }
+
   function switchView(view) {
     if (currentView === view) { switchView('cal'); return; }
     currentView = view;
 
-    document.getElementById('view-cal').classList.toggle('hidden', view !== 'cal');
-    document.getElementById('app-frames').style.display = view === 'cal' ? 'none' : '';
+    setFrameMode(view !== 'cal');
 
     // 앱 탭 왕복 뒤 주소창 상태가 바뀌어 있을 수 있다
     syncAppHeight();
     setTimeout(syncAppHeight, 300);
+
+    // 앱 안에서 예매를 기록하고 나왔을 수 있다
+    if (view === 'cal') renderCalendar();
 
     getApps().forEach(app => {
       const frame = document.getElementById(`frame-${app.id}`);
@@ -833,7 +938,7 @@
 
   function goToToday() {
     currentView = 'cal';
-    document.getElementById('view-cal').classList.remove('hidden');
+    setFrameMode(false);
     getApps().forEach(app => {
       const frame = document.getElementById(`frame-${app.id}`);
       const btn   = document.getElementById(`btn-${app.id}`);
@@ -990,10 +1095,47 @@
   }
 
   // ── 시간 포맷 ──
+  // 예전엔 parseInt 로 시만 떼어 '6시' 로 적었더니 18:00 과 18:30 이 같아 보였다.
+  // 분이 회차를 가르므로 24시간제로 그대로 적는다.
   function fmtTime(t) {
     if (!t) return '';
-    const h = parseInt(t);
-    return (h >= 13 ? h - 12 : h) + '시';
+    const m = String(t).match(/(\d{1,2})\s*:?\s*(\d{2})?/);
+    if (!m) return String(t);
+    return m[1].padStart(2, '0') + ':' + (m[2] || '00');
+  }
+
+  function toMinutes(t) {
+    const m = String(t || '').match(/(\d{1,2})\s*:?\s*(\d{2})?/);
+    return m ? (+m[1]) * 60 + (+(m[2] || 0)) : 0;
+  }
+
+  // ── 달력 모드 ──
+  // 'mine' 은 내 관람/사진만 칩으로 띄우고 나머지 회차는 흐리게 접는다.
+  // 'all'  — 내 기록은 칩, 나머지 회차는 흐린 줄이나 축으로. 공연 일정 전체가 보인다.
+  // 'mine' — 내가 기록한 예매/관람만. 나머지 회차는 아예 그리지 않는다.
+  const CAL_MODE_KEY = 'hub_cal_mode';
+  function getCalMode() {
+    return localStorage.getItem(CAL_MODE_KEY) === 'mine' ? 'mine' : 'all';
+  }
+  function setCalMode(m) {
+    localStorage.setItem(CAL_MODE_KEY, m === 'mine' ? 'mine' : 'all');
+    renderCalendar();
+  }
+  function renderCalModeButtons() {
+    const m = getCalMode();
+    document.getElementById('seg-mine').classList.toggle('on', m === 'mine');
+    document.getElementById('seg-all').classList.toggle('on',  m === 'all');
+  }
+
+  // 한 칸에 시각을 몇 줄까지 적을지. 넘으면 축으로 접는다.
+  // 화/목/금은 대개 1회, 수/토/일만 2회라 대부분의 날은 그대로 시각이 보인다.
+  const MAX_TIME_LINES = 3;
+  const AXIS_LO = 11 * 60, AXIS_HI = 21 * 60;
+
+  // 눈금의 좌우 위치로 시각을 나타낸다. 왼쪽이 낮, 오른쪽이 밤.
+  function axisPos(t) {
+    const r = (toMinutes(t) - AXIS_LO) / (AXIS_HI - AXIS_LO) * 100;
+    return Math.max(4, Math.min(96, r));
   }
 
   // ── 달력 ──
@@ -1014,6 +1156,8 @@
     const apps     = getApps();
     const notes    = getNotes();
     let html = '';
+    let usedAxis = false;   // 축을 한 번이라도 그렸을 때만 범례를 붙인다
+    const mode = getCalMode();
 
     for (let i = 0; i < first; i++) html += '<div class="cal-cell"></div>';
 
@@ -1031,9 +1175,23 @@
           .map(s => ({...s, _app: app}));
       }).sort((a,b) => (a.time||'').localeCompare(b.time||''));
 
-      const showC  = custom.filter(e => e.date === ds);
-      const hasSch = allSess.length > 0 || showC.length > 0;
+      const showC   = custom.filter(e => e.date === ds);
       const isToday = ds === todayStr;
+
+      // 내가 기록한 회차(관람/사진)와 그렇지 않은 회차를 가른다.
+      const marked = [], plain = [];
+      allSess.forEach(s => {
+        const attCnt = dayAtt.filter(r => r.appId === s._app.id && (!r.time || r.time === s.time)).length;
+        const hasPic = (notes[`${s._app.id}__${ds}__${s.time || ''}`]?.photoIds || []).length > 0;
+        (attCnt > 0 || hasPic ? marked : plain).push({ s, attCnt, hasPic });
+      });
+
+      // '내 기록' 에서는 안 간 회차를 아예 그리지 않는다.
+      const rest = mode === 'mine' ? [] : plain;
+
+      // 칸을 칠할지도 실제로 그리는 내용을 따라간다.
+      // 그러지 않으면 '내 기록' 에서 빈 칸만 색칠돼 있다.
+      const hasSch = marked.length > 0 || showC.length > 0 || rest.length > 0;
 
       const cls = ['cal-cell', 'clickable',
         hasSch      ? 'has-schedule' : '',
@@ -1042,40 +1200,49 @@
         isToday     ? 'today'        : '',
       ].filter(Boolean).join(' ');
 
-      const sessBadges = allSess.map(s => {
-        const attCnt = dayAtt.filter(r => r.appId === s._app.id && (!r.time || r.time === s.time)).length;
-        const chk     = attCnt >= 2 ? `✅×${attCnt}` : (attCnt === 1 ? '✅' : '');
-        const hasPic  = (notes[`${s._app.id}__${ds}__${s.time || ''}`]?.photoIds || []).length > 0;
-        const icon    = hasPic ? '🖼️' : chk;
+      const sessBadges = marked.map(({ s, attCnt, hasPic }) => {
+        const chk  = attCnt >= 2 ? `✅×${attCnt}` : (attCnt === 1 ? '✅' : '');
+        const icon = hasPic ? '🖼️' : chk;
         return `<div class="sess-card" style="${appStyle(s._app.color)}">
-          <div class="sess-card-top">
-            <span class="sess-card-time">${fmtTime(s.time)}</span>
-            <span class="sess-card-icons">${icon}</span>
-          </div>
-          <div class="sess-card-name">${s._app.icon ? s._app.icon + ' ' : ''}${s._app.name}</div>
+          <span>${s._app.icon || ''}</span>
+          <span class="sess-card-time">${fmtTime(s.time)}</span>
+          <span class="sess-card-icons">${icon}</span>
         </div>`;
       }).join('');
+
+      // 회차가 적으면 시각을 그대로, 몰린 날만 축으로 접는다.
+      const restBadges = rest.length === 0 ? ''
+        : rest.length <= MAX_TIME_LINES
+          ? rest.map(({ s }) =>
+              `<div class="sess-dim"><i style="background:${s._app.color}"></i>` +
+              `<span>${fmtTime(s.time)}</span></div>`).join('')
+          : (usedAxis = true, `<div class="sess-axis">${rest.map(({ s }) =>
+              `<i style="left:${axisPos(s.time)}%;background:${s._app.color}"></i>`).join('')}</div>`);
 
       const customBadges = showC.map(e => {
         const col    = e.color || COLOR_PALETTE[0];
         const hasPic = (e.photoIds || []).length > 0;
-        const icon   = hasPic ? '🖼️' : '✅';
         return `<div class="sess-card" style="${appStyle(col)}">
-          <div class="sess-card-top">
-            <span class="sess-card-time">${fmtTime(e.time)}</span>
-            <span class="sess-card-icons">${icon}</span>
-          </div>
-          <div class="sess-card-name">${e.name}</div>
+          <span class="sess-card-time">${fmtTime(e.time)}</span>
+          <span class="sess-card-icons">${hasPic ? '🖼️' : '✅'}</span>
         </div>`;
       }).join('');
 
       html += `<div class="${cls}" onclick="openDay('${ds}')">
         <div class="date-wrap"><span class="date-num">${d}</span></div>
         ${att && !hasSch ? '<div class="attended-dot"></div>' : ''}
-        ${hasSch ? `<div class="badges">${sessBadges}${customBadges}</div>` : ''}
+        ${hasSch ? `<div class="badges">${sessBadges}${customBadges}${restBadges}</div>` : ''}
       </div>`;
     }
     document.getElementById('cal-days').innerHTML = html;
+    renderCalModeButtons();
+
+    // 축이 없는 달에는 범례도 띄우지 않는다.
+    const legend = document.getElementById('axis-legend');
+    legend.textContent = usedAxis
+      ? `회차가 몰린 날은 눈금으로 —  왼쪽 ${AXIS_LO/60}시 · 오른쪽 ${AXIS_HI/60}시`
+      : '';
+    legend.style.display = usedAxis ? '' : 'none';
   }
 
   // ── 날짜 상세 ──
@@ -1190,39 +1357,67 @@
   }
   function closeSettings() { document.getElementById('ov-settings').classList.remove('open'); }
 
+  // 종료된 공연은 목록에서도 접어둔다. 지우기는 애매하고, 펼쳐 놓으면 계속 길어진다.
+  let _finishedOpen = false;
+  function toggleFinishedApps() {
+    _finishedOpen = !_finishedOpen;
+    renderSettingsAppList();
+  }
+
+  function appListRow(app, vis) {
+    const mode     = vis[app.id] || 'auto';
+    const finished = isFinished(app.id);
+    const last     = lastShowDate(app.id);
+    const pre      = presetOf(app.id);
+    const preset   = pre ? pre.icon : null;
+    const iconOff  = pre && ((preset && app.icon !== preset) ||
+                             (pre.color && app.color !== pre.color));
+
+    const note = mode === 'show' ? '항상 표시'
+               : mode === 'hide' ? '항상 숨김'
+               : finished ? `공연 종료 (~${last}) · 자동 숨김`
+               : last ? `~${last}` : '스케줄 없음';
+
+    // 눈알 아이콘은 무슨 상태인지 읽히지 않았다. 현재 값을 글자로 적는다.
+    const label = mode === 'show' ? '표시' : mode === 'hide' ? '숨김' : '자동';
+
+    return `
+      <div class="app-list-item">
+        <div class="app-list-dot" style="background:${app.color}"></div>
+        <div class="app-list-name">
+          ${app.icon ? app.icon + ' ' : ''}${app.name}
+          <div class="app-list-note">${note}</div>
+        </div>
+        ${iconOff ? `<button class="app-list-mini" title="프리셋 아이콘·색으로 되돌리기"
+            onclick="resetIconToPreset('${app.id}')">${preset || '🎨'}↩</button>` : ''}
+        <button class="app-list-vis mode-${mode}"
+                title="가로탭 표시 · 자동/표시/숨김 순환"
+                onclick="cycleVisibility('${app.id}')">${label}</button>
+        <button class="app-list-del" onclick="deleteApp('${app.id}')">✕</button>
+      </div>`;
+  }
+
   function renderSettingsAppList() {
     const apps = getApps();
     const vis  = getVisibility();
-    document.getElementById('app-list-ui').innerHTML = apps.length
-      ? apps.map(app => {
-          const mode     = vis[app.id] || 'auto';
-          const finished = isFinished(app.id);
-          const shown    = isTabVisible(app);
-          const last     = lastShowDate(app.id);
-          const preset   = presetIconOf(app.id);
-          const iconOff  = preset && app.icon !== preset;
+    if (!apps.length) {
+      document.getElementById('app-list-ui').innerHTML =
+        '<div style="font-size:12px;color:var(--text3);padding:6px 0">등록된 앱이 없습니다</div>';
+      return;
+    }
 
-          const note = mode === 'show' ? '항상 표시'
-                     : mode === 'hide' ? '항상 숨김'
-                     : finished ? `공연 종료 (~${last}) · 자동 숨김`
-                     : last ? `~${last}` : '스케줄 없음';
+    const live = apps.filter(a => !isFinished(a.id));
+    const done = apps.filter(a =>  isFinished(a.id));
 
-          return `
-        <div class="app-list-item">
-          <div class="app-list-dot" style="background:${app.color}"></div>
-          <div class="app-list-name">
-            ${app.icon ? app.icon + ' ' : ''}${app.name}
-            <div class="app-list-note">${note}</div>
-          </div>
-          ${iconOff ? `<button class="app-list-mini" title="프리셋 아이콘(${preset})으로 되돌리기"
-              onclick="resetIconToPreset('${app.id}')">${preset}↩</button>` : ''}
-          <button class="app-list-eye${shown ? ' on' : ''}"
-                  title="가로탭 표시 · 자동/표시/숨김 순환"
-                  onclick="cycleVisibility('${app.id}')">${shown ? '👁' : '🚫'}</button>
-          <button class="app-list-del" onclick="deleteApp('${app.id}')">✕</button>
-        </div>`;
-        }).join('')
-      : '<div style="font-size:12px;color:var(--text3);padding:6px 0">등록된 앱이 없습니다</div>';
+    const doneHtml = done.length ? `
+      <button class="app-group" onclick="toggleFinishedApps()">
+        <span>종료된 공연 ${done.length}</span>
+        <span class="app-group-caret">${_finishedOpen ? '▴' : '▾'}</span>
+      </button>
+      ${_finishedOpen ? done.map(a => appListRow(a, vis)).join('') : ''}` : '';
+
+    document.getElementById('app-list-ui').innerHTML =
+      live.map(a => appListRow(a, vis)).join('') + doneHtml;
   }
 
   // 자동 → 항상 표시 → 항상 숨김 → 자동
@@ -1339,7 +1534,11 @@
     const appUrl      = document.getElementById('af-app-url').value.trim();
     const recordsKey  = document.getElementById('af-records-key').value.trim();
     if (!name || !scheduleUrl) { alert('앱 이름과 스케줄 URL을 입력해주세요'); return; }
-    const color = document.querySelector('#af-colors .color-swatch.selected')?.dataset.hex || COLOR_PALETTE[0];
+    // 선택된 칸이 없으면 프리셋 색을 쓴다. 팔레트 기본값으로 떨어뜨리면
+    // 서로 다른 작품이 전부 같은 색이 되어버린다.
+    const presetColor = _presetFormId ? (allPresets().find(p => p.id === _presetFormId) || {}).color : null;
+    const color = document.querySelector('#af-colors .color-swatch.selected')?.dataset.hex
+                  || presetColor || COLOR_PALETTE[0];
     const id = _presetFormId || ('app_' + Date.now());
     const app = { id, name, icon, scheduleUrl, appUrl, color, recordsKey: recordsKey || null };
     const apps = getApps();
@@ -1351,6 +1550,7 @@
     _presetFormId = null;
     renderTabs();
     renderFrames();
+    refreshStatus();
     document.getElementById('ov-app-form').classList.remove('open');
     openSettings();
     renderCalendar();
@@ -1633,6 +1833,83 @@
     if (customMigrated) localStorage.setItem(CUSTOM_KEY, JSON.stringify(customs));
   }
 
+  // 앱을 추가한 뒤에도 '앱을 추가해 주세요' 가 남아 있던 것을 막는다.
+  // 상태 문구를 만드는 곳을 한 군데로 모은다.
+  function refreshStatus(failed) {
+    const status = document.getElementById('status');
+    if (!getApps().length) {
+      status.textContent = '⚙️ 설정에서 앱을 추가해 주세요';
+      status.style.display = '';
+    } else if (failed && failed.length) {
+      status.textContent = `⚠️ 스케줄을 못 불러온 앱: ${failed.join(', ')}`;
+      status.style.display = '';
+    } else {
+      status.style.display = 'none';
+    }
+  }
+
+  let _toastTimer = null;
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+  }
+
+  // ── 동기화 ──
+  // 관람 기록은 각 앱이 같은 오리진의 localStorage 에 쓰므로 데이터 자체는 공유된다.
+  // 문제는 허브가 다시 그릴 일이 없다는 것 — 앱에서 기록하고 돌아와도 화면이 그대로였다.
+  let _syncing = false;
+  async function syncNow(silent) {
+    if (_syncing) return;
+    _syncing = true;
+    const btn = document.getElementById('sync-btn');
+    btn.classList.add('spinning');
+
+    const apps = getApps();
+    const failed = [];
+    await Promise.all(apps.map(async app => {
+      try {
+        const r = await fetch(app.scheduleUrl, { cache: 'no-cache' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        schedules[app.id] = await r.json();
+      } catch (e) {
+        failed.push(`${app.name}(${e.message})`);
+      }
+    }));
+
+    refreshStatus(failed);
+    renderTabs();
+    renderCalendar();          // getAttended() 가 여기서 각 앱 기록을 다시 읽는다
+    await discoverApps(true);
+
+    btn.classList.remove('spinning');
+    _syncing = false;
+
+    if (!silent) {
+      if (failed.length) { toast(`⚠️ ${failed.join(', ')}`); }
+      else {
+        // 몇 건인지만 말하면 0건일 때 원인을 알 수 없다. 어디가 비었는지 보여준다.
+        const att = getAttended();
+        const n = Object.values(att).reduce((a, v) => a + v.length, 0);
+        const noKey = apps.filter(a => !a.recordsKey).map(a => a.name);
+        if (n > 0)            toast(`동기화 완료 · 관람 기록 ${n}건`);
+        else if (noKey.length) toast(`기록 키가 없는 앱: ${noKey.join(', ')}`);
+        else                   toast('저장된 관람 기록이 없습니다');
+      }
+    }
+  }
+
+  // 앱 탭에서 기록하고 돌아오는 경우가 가장 흔하다. 그때는 알아서 다시 읽는다.
+  function refreshRecords() {
+    if (currentView === 'cal') { renderTabs(); renderCalendar(); }
+  }
+  // 다른 탭이나 별도로 띄운 앱에서 기록했을 때 (같은 오리진에서만 발생)
+  addEventListener('storage', refreshRecords);
+  // 홈 화면에서 다시 열었을 때
+  addEventListener('visibilitychange', () => { if (!document.hidden) refreshRecords(); });
+
   async function init() {
     applyTheme(getTheme());
     const t = new Date();
@@ -1642,10 +1919,7 @@
     renderFrames();
     await migratePhotosToIndexedDB();
     const apps = getApps();
-    if (!apps.length) {
-      document.getElementById('status').textContent = '⚙️ 설정에서 앱을 추가해 주세요';
-      return;
-    }
+    if (!apps.length) { refreshStatus(); return; }
     // 스케줄 로드 실패를 조용히 삼키지 않는다. 어떤 앱이 안 떴는지 알려준다.
     const failed = [];
     await Promise.all(apps.map(async app => {
@@ -1658,13 +1932,7 @@
       }
     }));
 
-    const status = document.getElementById('status');
-    if (failed.length) {
-      status.textContent = `⚠️ 스케줄을 못 불러온 앱: ${failed.join(', ')}`;
-      status.style.display = '';
-    } else {
-      status.style.display = 'none';
-    }
+    refreshStatus(failed);
 
     renderTabs();          // 스케줄이 있어야 '공연 종료' 판정이 되므로 다시 그린다
     renderCalendar();

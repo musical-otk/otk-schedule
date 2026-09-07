@@ -1,4 +1,4 @@
-const CACHE_NAME = 'otk-schedule-v35';
+const CACHE_NAME = 'otk-schedule-v36';
 const BASE = '/otk-schedule';
 
 const PRECACHE_URLS = [
@@ -36,6 +36,25 @@ self.addEventListener('fetch', event => {
           return response;
         })
         .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
+  // HTML — 네트워크 우선, 실패하면 캐시.
+  // 캐시 우선으로 두면 CACHE_NAME 을 손으로 올리기 전까지 새 버전이 영원히 안 뜬다.
+  // 앱 코드가 통째로 index.html 한 장에 있어서 특히 티가 크다.
+  const isHtml = event.request.mode === 'navigate' ||
+                 url.pathname === BASE + '/' ||
+                 url.pathname.endsWith('.html');
+  if (isHtml) {
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          return response;
+        })
+        .catch(() => caches.match(event.request).then(c => c || caches.match(BASE + '/')))
     );
     return;
   }
