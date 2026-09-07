@@ -476,11 +476,12 @@
       <div class="axis-legend" id="axis-legend" style="display:none"></div>
     </div>
     <div id="status" class="loading">스케줄 불러오는 중…</div>
-    <div id="toast" class="toast"></div>
     <button class="fab" onclick="openCustomForm('')">+</button>
   </div>
 
   <div id="app-frames"></div>
+  <!-- 앱 탭에서도 동기화를 누를 수 있다. #view-cal 안에 두면 그때 안 보인다. -->
+  <div id="toast" class="toast"></div>
 
 </div>
 
@@ -1914,23 +1915,26 @@
 
     const apps = getApps();
     const failed = [];
-    await Promise.all(apps.map(async app => {
-      try {
-        const r = await fetch(app.scheduleUrl, { cache: 'no-cache' });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        schedules[app.id] = await r.json();
-      } catch (e) {
-        failed.push(`${app.name}(${e.message})`);
-      }
-    }));
+    try {
+      await Promise.all(apps.map(async app => {
+        try {
+          const r = await fetch(app.scheduleUrl, { cache: 'no-cache' });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          schedules[app.id] = await r.json();
+        } catch (e) {
+          failed.push(`${app.name}(${e.message})`);
+        }
+      }));
 
-    refreshStatus(failed);
-    renderTabs();
-    renderCalendar();          // getAttended() 가 여기서 각 앱 기록을 다시 읽는다
-    await discoverApps(true);
-
-    btn.classList.remove('spinning');
-    _syncing = false;
+      refreshStatus(failed);
+      renderTabs();
+      renderCalendar();        // getAttended() 가 여기서 각 앱 기록을 다시 읽는다
+      await discoverApps(true);
+    } finally {
+      // 중간에 터지면 버튼이 계속 돌고 두 번 다시 못 누르게 된다
+      btn.classList.remove('spinning');
+      _syncing = false;
+    }
 
     if (!silent) {
       if (failed.length) { toast(`⚠️ ${failed.join(', ')}`); }
