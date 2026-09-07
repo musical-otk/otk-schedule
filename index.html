@@ -1172,11 +1172,18 @@
       const dayAtt  = attended[ds] || [];
       const att     = dayAtt.length > 0;
 
+      // 배우 필터에 걸리더라도 내가 예매/관람한 회차는 남긴다.
+      // 이한솔만 보게 걸어두면 박정원 회차로 예매한 날이 통째로 사라져
+      // 칩이 아니라 점 하나로 떨어졌다. 날짜 시트는 이미 이렇게 처리하고 있었다.
+      const isMine = (app, s) =>
+        dayAtt.some(r => r.appId === app.id && (!r.time || r.time === s.time)) ||
+        (notes[`${app.id}__${ds}__${s.time || ''}`]?.photoIds || []).length > 0;
+
       const allSess = apps.flatMap(app => {
         const sch = schedules[app.id] || [];
         const appPrefs = prefs[app.id] || [];
         return sch
-          .filter(s => s.date === ds && matchesFilter(s, appPrefs))
+          .filter(s => s.date === ds && (isMine(app, s) || matchesFilter(s, appPrefs)))
           .map(s => ({...s, _app: app}));
       }).sort((a,b) => (a.time||'').localeCompare(b.time||''));
 
