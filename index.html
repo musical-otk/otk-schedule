@@ -183,9 +183,14 @@
       border-radius: 6px; padding: 2px 4px; width: 100%; min-width: 0; overflow: hidden;
       display: flex; align-items: center; gap: 3px;
     }
-    .sess-card-time { font-size: 9px; font-weight: 800; line-height: 1.4; letter-spacing: -0.3px;
+    /* 시각이 남는 폭을 먹고, 뒤에 붙는 표시들은 오른쪽에 차례로 놓인다 */
+    .sess-card-time { flex: 1; min-width: 0;
+                      font-size: 9px; font-weight: 800; line-height: 1.4; letter-spacing: -0.3px;
                       overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .sess-card-icons { font-size: 8px; line-height: 1; flex-shrink: 0; margin-left: auto; }
+    .sess-card-icons { font-size: 8px; font-weight: 700; line-height: 1; flex-shrink: 0; opacity: 0.75; }
+    /* 사진 있음. 🖼️ 이모지는 시각을 밀어내서 칩 색을 그대로 쓰는 점으로 바꿨다. */
+    .sess-card-pic { width: 4px; height: 4px; border-radius: 50%; flex-shrink: 0;
+                     background: currentColor; opacity: 0.8; }
 
     /* 안 가는 회차 — 회차가 적으면 시각을 그대로 적는다. */
     .sess-dim { display: flex; align-items: center; gap: 3px; padding: 0 2px; min-width: 0;
@@ -1200,15 +1205,14 @@
         isToday     ? 'today'        : '',
       ].filter(Boolean).join(' ');
 
-      const sessBadges = marked.map(({ s, attCnt, hasPic }) => {
-        const chk  = attCnt >= 2 ? `✅×${attCnt}` : (attCnt === 1 ? '✅' : '');
-        const icon = hasPic ? '🖼️' : chk;
-        return `<div class="sess-card" style="${appStyle(s._app.color)}">
-          <span>${s._app.icon || ''}</span>
+      // 칩은 색으로 이미 '내 기록'과 작품을 구분한다. 이모지를 더하면 좁은 칸에서
+      // 시각을 밀어낼 뿐이라 시간만 적는다. 같은 날 두 번 본 경우만 ×N 을 붙인다.
+      const sessBadges = marked.map(({ s, attCnt, hasPic }) => `
+        <div class="sess-card" style="${appStyle(s._app.color)}">
           <span class="sess-card-time">${fmtTime(s.time)}</span>
-          <span class="sess-card-icons">${icon}</span>
-        </div>`;
-      }).join('');
+          ${attCnt >= 2 ? `<span class="sess-card-icons">×${attCnt}</span>` : ''}
+          ${hasPic ? '<span class="sess-card-pic" title="사진 있음"></span>' : ''}
+        </div>`).join('');
 
       // 회차가 적으면 시각을 그대로, 몰린 날만 축으로 접는다.
       const restBadges = rest.length === 0 ? ''
@@ -1219,14 +1223,11 @@
           : (usedAxis = true, `<div class="sess-axis">${rest.map(({ s }) =>
               `<i style="left:${axisPos(s.time)}%;background:${s._app.color}"></i>`).join('')}</div>`);
 
-      const customBadges = showC.map(e => {
-        const col    = e.color || COLOR_PALETTE[0];
-        const hasPic = (e.photoIds || []).length > 0;
-        return `<div class="sess-card" style="${appStyle(col)}">
+      const customBadges = showC.map(e => `
+        <div class="sess-card" style="${appStyle(e.color || COLOR_PALETTE[0])}">
           <span class="sess-card-time">${fmtTime(e.time)}</span>
-          <span class="sess-card-icons">${hasPic ? '🖼️' : '✅'}</span>
-        </div>`;
-      }).join('');
+          ${(e.photoIds || []).length ? '<span class="sess-card-pic" title="사진 있음"></span>' : ''}
+        </div>`).join('');
 
       html += `<div class="${cls}" onclick="openDay('${ds}')">
         <div class="date-wrap"><span class="date-num">${d}</span></div>
