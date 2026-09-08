@@ -150,6 +150,22 @@
     }
     .seg-btn.on { background: var(--custom-bg); border-color: var(--custom-bd); color: var(--custom); }
     .seg-btn:active { opacity: 0.7; }
+    .seg-filter { flex: 0 0 auto; padding: 7px 12px; }
+
+    .filter-summary {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      background: var(--custom-bg); border: 1px solid var(--custom-bd);
+      color: var(--custom); border-radius: 10px; padding: 9px 12px;
+      font-size: 12px; font-weight: 700; margin-bottom: 10px;
+    }
+    .filter-clear {
+      background: none; border: 1px solid var(--custom-bd); color: var(--custom);
+      font-size: 11px; font-weight: 700; font-family: inherit; cursor: pointer;
+      padding: 4px 10px; border-radius: 8px; flex-shrink: 0;
+    }
+    /* 여러 작품에 나오는 배우는 어느 작품인지 색 점으로 보인다 */
+    .actor-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%;
+                 margin-left: 2px; vertical-align: middle; }
 
     .cal-grid { padding: 0 10px 24px; }
     .cal-dow { display: grid; grid-template-columns: repeat(7,1fr); margin-bottom: 4px; }
@@ -468,6 +484,7 @@
     <div class="cal-seg">
       <button class="seg-btn" id="seg-mine" onclick="setCalMode('mine')">내 기록</button>
       <button class="seg-btn" id="seg-all"  onclick="setCalMode('all')">전체 회차</button>
+      <button class="seg-btn seg-filter" id="seg-filter" onclick="openFilter()">🔎</button>
     </div>
     <div class="cal-grid">
       <div class="cal-dow">
@@ -556,6 +573,22 @@
       <div class="hint">탭으로 등록할 앱을 추가하세요.</div>
       <div id="app-list-ui"></div>
       <button class="add-app-btn" onclick="openAppForm()">+ 앱 추가</button>
+      <div class="section-title">보기 필터</div>
+      <div class="hint">달력에 어떤 작품·배우를 띄울지 고릅니다.</div>
+      <button class="add-app-btn" onclick="openFilter()">🔎 필터 열기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 필터 — 잠깐 한두 작품만 보고 싶을 때가 잦아 설정과 따로 뺀다 -->
+<div class="overlay" id="ov-filter">
+  <div class="sheet settings-sheet">
+    <div class="sheet-handle"></div>
+    <div class="settings-header">
+      <span>보기 필터</span>
+      <button class="settings-close" onclick="closeFilter()">✕</button>
+    </div>
+    <div class="settings-body">
       <div id="actor-filters"></div>
     </div>
   </div>
@@ -1076,9 +1109,48 @@
   }
   function savePrefs(p) { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); }
 
-  function matchesFilter(session, selected) {
-    if (!selected || !selected.length) return true;
-    return getActorFields(session).some(f => session[f] && selected.includes(session[f]));
+  // ── 필터 ──
+  // 배우는 작품을 가로질러 고른다. 같은 배우가 여러 작품에 나오기 때문이다.
+  // 작품 필터와 AND 로 묶인다:
+  //   이한솔만            → 모든 작품의 이한솔 회차
+  //   이한솔 + 비더슈탄트 → 비더슈탄트의 이한솔 회차만
+  const FILTER_KEY = 'hub_filter';
+  function getFilter() {
+    let f = null;
+    try { f = JSON.parse(localStorage.getItem(FILTER_KEY)); } catch {}
+    if (f && Array.isArray(f.actors) && Array.isArray(f.apps)) return f;
+    // 예전에는 작품별로 따로 골랐다. 고른 배우들을 합쳐 옮긴다.
+    const old = getPrefs();
+    const actors = [...new Set(Object.values(old).flat().filter(Boolean))];
+    return { actors, apps: [] };
+  }
+  function saveFilter(f) { localStorage.setItem(FILTER_KEY, JSON.stringify(f)); }
+  function filterActive() {
+    const f = getFilter();
+    return f.actors.length > 0 || f.apps.length > 0;
+  }
+  function clearFilter() {
+    saveFilter({ actors: [], apps: [] });
+    renderActorFilters(); renderCalendar();
+  }
+
+  function matchesFilter(session, app, f) {
+    f = f || getFilter();
+    if (f.apps.length && !f.apps.includes(app.id)) return false;
+    if (!f.actors.length) return true;
+    return getActorFields(session).some(k => session[k] && f.actors.includes(session[k]));
+  }
+
+  // 배우가 어느 작품에 나오는지. 같은 이름이 여러 작품에 있을 수 있다.
+  function actorIndex() {
+    const map = new Map();
+    getApps().forEach(app => {
+      extractActors(schedules[app.id] || []).forEach(name => {
+        if (!map.has(name)) map.set(name, []);
+        map.get(name).push(app);
+      });
+    });
+    return new Map([...map.entries()].sort((a, b) => a[0].localeCompare(b[0], 'ko')));
   }
 
   // ── 커스텀 이벤트 ──
@@ -1234,7 +1306,20 @@
     const m = getCalMode();
     document.getElementById('seg-mine').classList.toggle('on', m === 'mine');
     document.getElementById('seg-all').classList.toggle('on',  m === 'all');
+    // 필터가 걸려 있으면 눈에 띄어야 한다. 안 그러면 일정이 없는 줄 안다.
+    const f  = getFilter();
+    const n  = f.apps.length + f.actors.length;
+    const fb = document.getElementById('seg-filter');
+    fb.classList.toggle('on', n > 0);
+    fb.textContent = n > 0 ? `🔎 ${n}` : '🔎';
   }
+
+  function openFilter()  {
+    document.getElementById('ov-settings').classList.remove('open');
+    renderActorFilters();
+    document.getElementById('ov-filter').classList.add('open');
+  }
+  function closeFilter() { document.getElementById('ov-filter').classList.remove('open'); }
 
   // 한 칸에 시각을 몇 줄까지 적을지. 넘으면 축으로 접는다.
   // 화/목/금은 대개 1회, 수/토/일만 2회라 대부분의 날은 그대로 시각이 보인다.
@@ -1259,7 +1344,7 @@
     document.getElementById('cal-month-label').textContent = `${currentYear}년 ${currentMonth + 1}월`;
     const first    = new Date(currentYear, currentMonth, 1).getDay();
     const days     = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const prefs    = getPrefs();
+    const filter   = getFilter();
     const attended = getAttended();
     const custom   = getCustom();
     const apps     = getApps();
@@ -1286,9 +1371,8 @@
 
       const allSess = apps.flatMap(app => {
         const sch = schedules[app.id] || [];
-        const appPrefs = prefs[app.id] || [];
         return sch
-          .filter(s => s.date === ds && (isMine(app, s) || matchesFilter(s, appPrefs)))
+          .filter(s => s.date === ds && (isMine(app, s) || matchesFilter(s, app, filter)))
           .map(s => ({...s, _app: app}));
       }).sort((a,b) => (a.time||'').localeCompare(b.time||''));
 
@@ -1370,15 +1454,13 @@
     document.getElementById('sheet-date').textContent =
       `${ds.slice(5).replace('-','.')}(${DOW[d.getDay()]})`;
 
-    const prefs  = getPrefs();
     const dayAtt = attended[ds] || [];
     const apps   = getApps();
 
     const sessions = apps.flatMap(app => {
       const sch = schedules[app.id] || [];
-      const appPrefs = prefs[app.id] || [];
       return sch
-        .filter(s => s.date === ds && (matchesFilter(s, appPrefs) || dayAtt.some(r => r.appId === app.id && (!r.time || r.time === s.time))))
+        .filter(s => s.date === ds && (matchesFilter(s, app) || dayAtt.some(r => r.appId === app.id && (!r.time || r.time === s.time))))
         .map(s => ({...s, _app: app}));
     }).sort((a,b) => (a.time||'').localeCompare(b.time||''));
 
@@ -1477,7 +1559,6 @@
   // ── 설정 ──
   function openSettings() {
     renderSettingsAppList();
-    renderActorFilters();
     document.getElementById('ov-settings').classList.add('open');
   }
   function closeSettings() { document.getElementById('ov-settings').classList.remove('open'); }
@@ -1552,34 +1633,64 @@
   }
 
   function renderActorFilters() {
+    const f     = getFilter();
     const apps  = getApps();
-    const prefs = getPrefs();
-    document.getElementById('actor-filters').innerHTML = apps.map(app => {
-      const actors = extractActors(schedules[app.id] || []);
-      if (!actors.length) return '';
-      const selected = prefs[app.id] || [];
-      const chips = actors.map(a => {
-        const isOn = selected.includes(a);
-        const chipStyle = isOn ? `background:${hexToRgba(app.color,0.16)};color:${app.color};border-color:${hexToRgba(app.color,0.36)}` : '';
-        return `<button class="chip${isOn ? ' on' : ''}" style="${chipStyle}"
-          onclick="toggleActor('${app.id}','${a}',this,'${app.color}')">${a}</button>`;
-      }).join('');
-      return `<div class="section-title" style="color:${app.color}">${app.icon ? app.icon + ' ' : ''}${app.name}</div>
-              <div class="hint">선택한 배우의 일정만 표시됩니다. 아무것도 선택 안 하면 전체 표시.</div>
-              <div class="actor-list">${chips}</div>`;
+    const index = actorIndex();
+    const box   = document.getElementById('actor-filters');
+
+    if (!index.size) { box.innerHTML =
+      '<div class="hint">스케줄을 불러오면 배우 목록이 나옵니다.</div>'; return; }
+
+    // 작품 — 안 고르면 전체
+    const appChips = apps.filter(a => (schedules[a.id] || []).length).map(app => {
+      const on = f.apps.includes(app.id);
+      const st = on ? `background:${hexToRgba(app.color,0.16)};color:${app.color};border-color:${hexToRgba(app.color,0.36)}` : '';
+      return `<button class="chip${on ? ' on' : ''}" style="${st}"
+        onclick="toggleFilterApp('${app.id}')">${app.icon ? app.icon + ' ' : ''}${app.name}</button>`;
     }).join('');
+
+    // 배우 — 작품을 가로질러 한 목록. 여러 작품에 나오면 그 작품들의 색 점을 붙인다.
+    const actorChips = [...index.entries()].map(([name, inApps]) => {
+      const on = f.actors.includes(name);
+      const lead = inApps[0];
+      const st = on ? `background:${hexToRgba(lead.color,0.16)};color:${lead.color};border-color:${hexToRgba(lead.color,0.36)}` : '';
+      const dots = inApps.length > 1
+        ? ' ' + inApps.map(a => `<span class="actor-dot" style="background:${a.color}"></span>`).join('')
+        : '';
+      return `<button class="chip${on ? ' on' : ''}" style="${st}"
+        onclick="toggleFilterActor('${name.replace(/'/g, "\\'")}')">${name}${dots}</button>`;
+    }).join('');
+
+    const summary = filterActive()
+      ? `<div class="filter-summary">
+           <span>${[f.apps.length ? `작품 ${f.apps.length}` : '', f.actors.length ? `배우 ${f.actors.length}` : ''].filter(Boolean).join(' · ')} 적용 중</span>
+           <button class="filter-clear" onclick="clearFilter()">모두 해제</button>
+         </div>`
+      : '';
+
+    box.innerHTML = summary +
+      `<div class="section-title" style="border-top:none;padding-top:2px">작품</div>
+       <div class="hint">아무것도 안 고르면 전체 작품을 봅니다.</div>
+       <div class="actor-list">${appChips}</div>
+       <div class="section-title">배우</div>
+       <div class="hint">작품에 상관없이 고릅니다. 작품과 함께 고르면 그 작품의 해당 배우 회차만 보입니다.</div>
+       <div class="actor-list">${actorChips}</div>`;
   }
 
-  function toggleActor(appId, name, el, color) {
-    const prefs = getPrefs();
-    prefs[appId] = prefs[appId] || [];
-    const idx = prefs[appId].indexOf(name);
-    if (idx === -1) prefs[appId].push(name); else prefs[appId].splice(idx, 1);
-    savePrefs(prefs);
-    const isOn = prefs[appId].includes(name);
-    el.classList.toggle('on', isOn);
-    el.style.cssText = isOn ? `background:${hexToRgba(color,0.16)};color:${color};border-color:${hexToRgba(color,0.36)}` : '';
-    renderCalendar();
+  function toggleFilterApp(id) {
+    const f = getFilter();
+    const i = f.apps.indexOf(id);
+    if (i === -1) f.apps.push(id); else f.apps.splice(i, 1);
+    saveFilter(f);
+    renderActorFilters(); renderCalendar();
+  }
+
+  function toggleFilterActor(name) {
+    const f = getFilter();
+    const i = f.actors.indexOf(name);
+    if (i === -1) f.actors.push(name); else f.actors.splice(i, 1);
+    saveFilter(f);
+    renderActorFilters(); renderCalendar();
   }
 
   function deleteApp(id) {
@@ -2099,7 +2210,7 @@
   _pvImg.addEventListener('dblclick', (e) => { e.stopPropagation(); pvToggleZoom(); });
 
   // 뒤로가기 버튼: 오버레이 닫기 (PWA 앱 종료 방지)
-  const OVERLAY_CLOSE_ORDER = ['ov-photo-view','ov-note','ov-custom','ov-app-form','ov-settings','ov-detail'];
+  const OVERLAY_CLOSE_ORDER = ['ov-photo-view','ov-note','ov-custom','ov-app-form','ov-filter','ov-settings','ov-detail'];
   history.pushState({pwa:true}, '');
   window.addEventListener('popstate', () => {
     history.pushState({pwa:true}, '');
