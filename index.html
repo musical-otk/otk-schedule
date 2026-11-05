@@ -151,6 +151,50 @@
     .seg-btn.on { background: var(--custom-bg); border-color: var(--custom-bd); color: var(--custom); }
     .seg-btn:active { opacity: 0.7; }
     .seg-filter { flex: 0 0 auto; padding: 7px 12px; }
+    /* 월/주 — 붙어 있는 한 덩어리 토글 */
+    .seg-view { display: flex; flex: 0 0 auto; }
+    .seg-view .seg-btn { flex: 0 0 auto; padding: 7px 10px; }
+    .seg-view .seg-btn:first-child { border-radius: 9px 0 0 9px; }
+    .seg-view .seg-btn:last-child  { border-radius: 0 9px 9px 0; margin-left: -1px; }
+
+    /* ── 주간 보기 — 하루씩 세로로, 회차마다 캐스팅·좌석까지 펼친다 ── */
+    #cal-week { padding: 0 12px 88px; }
+    .wk-day { border-top: 1px solid var(--border); padding: 8px 0 6px; }
+    .wk-day-hd { display: flex; align-items: center; gap: 6px; padding: 2px 2px 6px;
+                 font-size: 13px; font-weight: 700; color: var(--text2); cursor: pointer; }
+    .wk-day-hd.sunday   { color: #c06060; }
+    .wk-day-hd.saturday { color: var(--sat); }
+    .wk-day-hd .wk-today { font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 6px;
+                           background: var(--text1); color: var(--bg1); }
+    .wk-empty { font-size: 12px; color: var(--text3); font-weight: 500; margin-left: 4px; }
+    .wk-sess { display: flex; gap: 10px; padding: 7px 8px; margin-bottom: 4px;
+               border-radius: 10px; background: var(--bg2); cursor: pointer; }
+    .wk-sess:active { opacity: 0.7; }
+    .wk-sess.plain { background: none; }
+    .wk-sess.transferred { opacity: 0.5; }
+    .wk-bar { width: 3px; border-radius: 2px; flex-shrink: 0; }
+    .wk-time { font-size: 13px; font-weight: 800; min-width: 40px; padding-top: 1px; }
+    .wk-body { flex: 1; min-width: 0; }
+    .wk-line1 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+    .wk-app { font-weight: 700; }
+    .wk-mark { font-size: 11px; font-weight: 700; }
+    .wk-mark.att { color: var(--attended); }
+    .wk-mark.booked { color: var(--custom); }
+    .wk-mark.trans { color: var(--text3); }
+    .wk-seat { font-size: 11px; color: var(--text2); }
+    .wk-note { font-size: 11px; color: var(--text3); }
+    .wk-cast { font-size: 12px; color: var(--text2); margin-top: 3px; line-height: 1.5; }
+    .wk-cast b { color: var(--text1); }
+    .wk-sess.plain .wk-time, .wk-sess.plain .wk-cast { color: var(--text3); }
+    .wk-evs { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+    .wk-ev { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px; line-height: 1.4; }
+    /* 오늘 — 칸 전체를 띄워 한눈에 찾게 한다 */
+    .wk-day.today { border-top-color: transparent; background: var(--custom-bg);
+                    border: 1.5px solid var(--custom-bd); border-radius: 12px;
+                    padding: 8px 8px 6px; margin: 4px -8px; }
+    .wk-day.today + .wk-day { border-top-color: transparent; }
+    .wk-day.today .wk-day-hd { color: var(--text1); font-size: 14px; }
+    .wk-day.past .wk-day-hd { opacity: 0.55; }
 
     .filter-summary {
       display: flex; align-items: center; justify-content: space-between; gap: 8px;
@@ -163,9 +207,20 @@
       font-size: 11px; font-weight: 700; font-family: inherit; cursor: pointer;
       padding: 4px 10px; border-radius: 8px; flex-shrink: 0;
     }
-    /* 여러 작품에 나오는 배우는 어느 작품인지 색 점으로 보인다 */
-    .actor-dot { display: inline-block; width: 5px; height: 5px; border-radius: 50%;
-                 margin-left: 2px; vertical-align: middle; }
+    /* 배우 필터의 작품별 소제목 */
+    .filter-group {
+      display: flex; align-items: center; gap: 6px; width: 100%;
+      background: none; border: none; font-family: inherit; cursor: pointer; text-align: left;
+      font-size: 13px; font-weight: 700; color: var(--text2); padding: 10px 2px;
+    }
+    .filter-group:active { opacity: 0.7; }
+    .filter-group-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .filter-group-name { flex-shrink: 0; }
+    .filter-group-picked {
+      flex: 1; min-width: 0; font-size: 11px; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .filter-group .app-group-caret { margin-left: auto; color: var(--text3); }
 
     .cal-grid { padding: 0 10px 24px; }
     .cal-dow { display: grid; grid-template-columns: repeat(7,1fr); margin-bottom: 4px; }
@@ -293,6 +348,7 @@
     .session-meta { font-size: 11px; color: var(--text3); margin-top: 3px; }
     .session-attended { font-size: 11px; color: var(--attended); }
     .session-transferred { font-size: 11px; color: var(--text3); }
+    .session-booked { font-size: 11px; font-weight: 700; color: var(--custom); }
     .session-acts { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; flex-shrink: 0; padding-top: 2px; }
     .session-act-btn {
       background: none; border: none; color: var(--text3); font-size: 15px;
@@ -482,11 +538,16 @@
       <button class="nav-btn" onclick="changeMonth(1)">›</button>
     </div>
     <div class="cal-seg">
+      <div class="seg-view">
+        <button class="seg-btn" id="seg-month" onclick="setCalView('month')">월</button>
+        <button class="seg-btn" id="seg-week"  onclick="setCalView('week')">주</button>
+      </div>
       <button class="seg-btn" id="seg-mine" onclick="setCalMode('mine')">내 기록</button>
       <button class="seg-btn" id="seg-all"  onclick="setCalMode('all')">전체 회차</button>
       <button class="seg-btn seg-filter" id="seg-filter" onclick="openFilter()">🔎</button>
     </div>
-    <div class="cal-grid">
+    <div id="cal-week" hidden></div>
+    <div class="cal-grid" id="cal-grid">
       <div class="cal-dow">
         <div class="dow-cell">일</div><div class="dow-cell">월</div>
         <div class="dow-cell">화</div><div class="dow-cell">수</div>
@@ -584,12 +645,29 @@
 <div class="overlay" id="ov-filter">
   <div class="sheet settings-sheet">
     <div class="sheet-handle"></div>
-    <div class="settings-header">
-      <span>보기 필터</span>
+    <div class="settings-hd">
+      <div class="settings-title">보기 필터</div>
       <button class="settings-close" onclick="closeFilter()">✕</button>
     </div>
     <div class="settings-body">
       <div id="actor-filters"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 숨겨진 공연 — 종료된 공연도 탭 설정을 바꾸지 않고 바로 열어본다 -->
+<div class="overlay" id="ov-hidden" onclick="closeOnBg(event,'ov-hidden')">
+  <div class="sheet settings-sheet">
+    <div class="sheet-handle"></div>
+    <div class="settings-hd">
+      <div class="settings-title">숨겨진 공연</div>
+      <button class="settings-close" onclick="closeHiddenApps()">✕</button>
+    </div>
+    <div class="settings-body">
+      <div id="hidden-app-list" style="display:flex;flex-direction:column;gap:6px;padding-bottom:4px"></div>
+      <button class="app-group" onclick="closeHiddenApps();openSettings()">
+        <span>탭 표시 설정</span><span class="app-group-caret">›</span>
+      </button>
     </div>
   </div>
 </div>
@@ -606,9 +684,13 @@
       <div class="form-label" style="padding:6px 0 8px">알려진 앱</div>
       <div id="preset-list" style="display:flex;flex-direction:column;gap:6px"></div>
     </div>
-    <div style="padding:12px 16px 4px;border-top:1px solid var(--border);margin-top:8px">
-      <div class="form-label" style="padding:0 0 10px">직접 추가</div>
+    <div style="padding:4px 16px 4px;margin-top:8px">
+      <button class="app-group" id="af-manual-toggle" onclick="toggleManualForm()">
+        <span>직접 추가</span><span class="app-group-caret">▾</span>
+      </button>
     </div>
+    <!-- 알려진 앱은 누르면 바로 추가된다. 입력칸은 목록에 없는 앱을 넣을 때만 쓴다. -->
+    <div id="af-manual" hidden>
     <div class="form-row" style="padding-top:0">
       <div class="form-label">앱 이름</div>
       <input class="form-input" id="af-name" placeholder="예: 라져">
@@ -637,6 +719,7 @@
     <div class="form-actions">
       <button class="btn-cancel" onclick="closeAppForm()">취소</button>
       <button class="btn-primary" onclick="saveAppForm()">추가</button>
+    </div>
     </div>
   </div>
 </div>
@@ -869,7 +952,8 @@
 
       found.sort((a, b) => (b.lastDate || '').localeCompare(a.lastDate || ''));
       localStorage.setItem(DISCOVERED_KEY, JSON.stringify(found));
-      if (!silent) renderPresetList();
+      // 앱 추가 창을 열어둔 채 백그라운드 발견이 끝나면 날짜 분류를 다시 그린다
+      if (!silent || document.getElementById('ov-app-form').classList.contains('open')) renderPresetList();
       return found;
     } catch (e) {
       if (!silent) alert('저장소 목록을 불러오지 못했습니다: ' + e.message);
@@ -877,10 +961,33 @@
     }
   }
 
+  // 프리셋 schedule.json 에서 읽은 마지막 공연일 {scheduleUrl: 'YYYY-MM-DD'}
+  const _presetLast = {};
+  async function loadPresetDates() {
+    const todo = PRESET_APPS.filter(p => !_presetLast[p.scheduleUrl]);
+    if (!todo.length) return;
+    await Promise.all(todo.map(async p => {
+      try {
+        const rows = await fetch(p.scheduleUrl, { cache: 'no-cache' }).then(r => r.json());
+        const last = Array.isArray(rows) && rows.reduce((m, x) => (x.date && x.date > m ? x.date : m), '');
+        if (last) _presetLast[p.scheduleUrl] = last;
+      } catch {}
+    }));
+    renderPresetList();
+  }
+
   // 코드에 박힌 프리셋 + 자동 발견분을 합친다. 코드 쪽 값(아이콘·색)이 우선.
   function allPresets() {
-    const merged = PRESET_APPS.slice();
-    getDiscovered().forEach(d => {
+    // 코드 프리셋에는 마지막 공연일이 없어 끝난 공연도 진행 중으로 분류됐다.
+    // 날짜는 자동 발견 때 schedule.json 에서 읽어둔 것을 빌려 쓴다.
+    // 자동 발견은 GitHub API 제한에 막힐 수 있어, 앱 추가 창을 열 때 직접 읽은 값을 먼저 쓴다.
+    const found = getDiscovered();
+    const merged = PRESET_APPS.map(p => {
+      const d = found.find(x => x.scheduleUrl === p.scheduleUrl);
+      const last = _presetLast[p.scheduleUrl] || (d && d.lastDate);
+      return last ? { ...p, lastDate: last } : p;
+    });
+    found.forEach(d => {
       if (!merged.some(p => p.scheduleUrl === d.scheduleUrl)) merged.push(d);
     });
     return merged;
@@ -976,14 +1083,17 @@
   }
 
   // ── 탭 렌더링 ──
+  // 숨긴 공연을 잠깐 열어볼 때만 탭에 끼워 넣는다. 다른 화면으로 가면 다시 빠진다.
+  let _peekApp = null;
+
   function renderTabs() {
-    const visible = getApps().filter(isTabVisible);
-    const hiddenCount = getApps().length - visible.length;
+    const visible = getApps().filter(a => isTabVisible(a) || a.id === _peekApp);
+    const hiddenCount = getApps().filter(a => !isTabVisible(a)).length;
     document.getElementById('app-tabs').innerHTML =
       visible.map(app =>
         `<button class="app-btn" id="btn-${app.id}" onclick="switchView('${app.id}')">${app.icon ? app.icon + ' ' : ''}${app.name}</button>`
       ).join('') +
-      (hiddenCount ? `<button class="app-btn app-btn-more" onclick="openSettings()" title="설정에서 표시 여부를 바꿀 수 있습니다">+${hiddenCount}</button>` : '');
+      (hiddenCount ? `<button class="app-btn app-btn-more" onclick="openHiddenApps()" title="숨겨진 공연 열기">+${hiddenCount}</button>` : '');
   }
 
   // ── iframe 렌더링 ──
@@ -1024,6 +1134,24 @@
 
   // ── 상태 ──
   let schedules = {};
+  // 각 작품 앱의 events.json (특전·커튼콜 위크 등). 기간 단위: {name, startDate, endDate, color, description?}
+  let appEvents = {};
+  async function loadEvents(list) {
+    await Promise.all(list.map(async app => {
+      const url = (app.scheduleUrl || '').replace(/schedule\.json(\?.*)?$/, 'events.json');
+      if (!url.endsWith('events.json')) return;
+      try {
+        const r = await fetch(url, { cache: 'no-cache' });
+        if (!r.ok) return;
+        const rows = await r.json();
+        if (Array.isArray(rows)) appEvents[app.id] = rows;
+      } catch {}   // 이벤트가 없는 작품도 많다. 조용히 넘어간다.
+    }));
+    if (currentView === 'cal' && getCalView() === 'week') renderCalendar();
+  }
+  function eventsOn(appId, ds) {
+    return (appEvents[appId] || []).filter(e => e.startDate && e.startDate <= ds && ds <= (e.endDate || e.startDate));
+  }
   let currentYear, currentMonth;
   let currentView = 'cal';
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -1076,6 +1204,10 @@
     if (currentView === view) { switchView('cal'); return; }
     currentView = view;
 
+    // 숨긴 공연에서 다른 화면으로 넘어가면 임시 탭을 거둔다
+    const peek = view !== 'cal' && getApps().some(a => a.id === view && !isTabVisible(a)) ? view : null;
+    if (peek !== _peekApp) { _peekApp = peek; renderTabs(); }
+
     setFrameMode(view !== 'cal');
 
     // 앱 탭 왕복 뒤 주소창 상태가 바뀌어 있을 수 있다
@@ -1102,8 +1234,31 @@
     });
   }
 
+  function openHiddenApps() {
+    const hidden = getApps().filter(a => !isTabVisible(a));
+    document.getElementById('hidden-app-list').innerHTML = hidden.map(app => {
+      const last = lastShowDate(app.id);
+      const date = last ? `<div class="preset-date">${last < todayStr ? '종료 ' : '~'}${last}</div>` : '';
+      const open = app.appUrl ? '열기 ›' : '앱 주소 없음';
+      return `<div class="preset-item${app.appUrl ? '' : ' added'}" onclick="peekApp('${app.id}')">
+        <div class="preset-dot" style="background:${app.color}"></div>
+        <div class="preset-name">${app.icon ? app.icon + ' ' : ''}${app.name}</div>
+        ${date}<div class="preset-add">${open}</div>
+      </div>`;
+    }).join('');
+    document.getElementById('ov-hidden').classList.add('open');
+  }
+  function closeHiddenApps() { document.getElementById('ov-hidden').classList.remove('open'); }
+
+  function peekApp(id) {
+    closeHiddenApps();
+    currentView = null;
+    switchView(id);
+  }
+
   function goToToday() {
     currentView = 'cal';
+    if (_peekApp) { _peekApp = null; renderTabs(); }
     setFrameMode(false);
     getApps().forEach(app => {
       const frame = document.getElementById(`frame-${app.id}`);
@@ -1113,6 +1268,7 @@
     });
     const t = new Date();
     currentYear = t.getFullYear(); currentMonth = t.getMonth();
+    weekStart = sundayOf(t);
     renderCalendar();
   }
 
@@ -1145,11 +1301,20 @@
   function getFilter() {
     let f = null;
     try { f = JSON.parse(localStorage.getItem(FILTER_KEY)); } catch {}
-    if (f && Array.isArray(f.actors) && Array.isArray(f.apps)) return f;
+    if (f && Array.isArray(f.actors) && Array.isArray(f.apps)) {
+      if (!Array.isArray(f.off)) f.off = [];
+      return f;
+    }
     // 예전에는 작품별로 따로 골랐다. 고른 배우들을 합쳐 옮긴다.
     const old = getPrefs();
     const actors = [...new Set(Object.values(old).flat().filter(Boolean))];
-    return { actors, apps: [] };
+    return { actors, apps: [], off: [] };
+  }
+  // 켜는 건 이름 단위(모든 작품에서 같이), 끄는 건 작품 단위.
+  // 끈 작품은 off 에 'appId|이름' 으로 남긴다.
+  const offKey = (appId, name) => appId + '|' + name;
+  function actorOn(f, appId, name) {
+    return f.actors.includes(name) && !f.off.includes(offKey(appId, name));
   }
   function saveFilter(f) { localStorage.setItem(FILTER_KEY, JSON.stringify(f)); }
   function filterActive() {
@@ -1157,7 +1322,7 @@
     return f.actors.length > 0 || f.apps.length > 0;
   }
   function clearFilter() {
-    saveFilter({ actors: [], apps: [] });
+    saveFilter({ actors: [], apps: [], off: [] });
     renderActorFilters(); renderCalendar();
   }
 
@@ -1165,7 +1330,7 @@
     f = f || getFilter();
     if (f.apps.length && !f.apps.includes(app.id)) return false;
     if (!f.actors.length) return true;
-    return getActorFields(session).some(k => session[k] && f.actors.includes(session[k]));
+    return getActorFields(session).some(k => session[k] && actorOn(f, app.id, session[k]));
   }
 
   // 배우가 어느 작품에 나오는지. 같은 이름이 여러 작품에 있을 수 있다.
@@ -1343,6 +1508,7 @@
 
   function openFilter()  {
     document.getElementById('ov-settings').classList.remove('open');
+    _filterDoneOpen = null;
     renderActorFilters();
     document.getElementById('ov-filter').classList.add('open');
   }
@@ -1361,13 +1527,186 @@
 
   // ── 달력 ──
   function changeMonth(d) {
+    // 주간에서는 같은 ‹ › 가 한 주씩 넘긴다
+    if (getCalView() === 'week') {
+      const w = new Date(weekStart); w.setDate(w.getDate() + 7 * d);
+      weekStart = w;
+      currentYear = w.getFullYear(); currentMonth = w.getMonth();
+      renderCalendar();
+      return;
+    }
     currentMonth += d;
     if (currentMonth < 0)  { currentMonth = 11; currentYear--; }
     if (currentMonth > 11) { currentMonth = 0;  currentYear++; }
     renderCalendar();
   }
 
+  // ── 월간 / 주간 ──
+  // 월간 칸은 좁아 시각과 색뿐이다. 주간은 하루씩 펼쳐 캐스팅·좌석까지 한눈에 본다.
+  const CAL_VIEW_KEY = 'hub_cal_view';
+  let weekStart = null;   // 보고 있는 주의 일요일 (Date, 0시)
+
+  function getCalView() {
+    return localStorage.getItem(CAL_VIEW_KEY) === 'week' ? 'week' : 'month';
+  }
+  function sundayOf(d) {
+    const s = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    s.setDate(s.getDate() - s.getDay());
+    return s;
+  }
+  function ymd(d) {
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function setCalView(v) {
+    if (v === getCalView()) return;
+    localStorage.setItem(CAL_VIEW_KEY, v === 'week' ? 'week' : 'month');
+    if (v === 'week') {
+      // 보던 달에 오늘이 있으면 이번 주, 아니면 그 달 첫 주
+      const t = new Date();
+      const inMonth = t.getFullYear() === currentYear && t.getMonth() === currentMonth;
+      weekStart = sundayOf(inMonth ? t : new Date(currentYear, currentMonth, 1));
+    } else if (weekStart) {
+      // 주가 두 달에 걸치면 목요일이 속한 달로 간다
+      const th = new Date(weekStart); th.setDate(th.getDate() + 4);
+      currentYear = th.getFullYear(); currentMonth = th.getMonth();
+    }
+    renderCalendar();
+  }
+  function renderCalViewButtons(v) {
+    document.getElementById('seg-month').classList.toggle('on', v === 'month');
+    document.getElementById('seg-week').classList.toggle('on', v === 'week');
+    document.getElementById('cal-grid').hidden = v === 'week';
+    document.getElementById('cal-week').hidden = v !== 'week';
+  }
+
+  function fmtSeat(r) {
+    if (r.seatZone && r.seatRow)
+      return [r.seatZone + '구역', r.seatRow + '열', r.seatNumber != null ? r.seatNumber + '번' : ''].filter(Boolean).join(' ');
+    if (r.seatZone)
+      return [r.seatZone + '열', r.seatNumber != null ? r.seatNumber + '번' : ''].filter(Boolean).join(' ');
+    if (r.seatNumber != null) return r.seatNumber + '번';
+    return '';
+  }
+
+  function renderWeek() {
+    if (!weekStart) weekStart = sundayOf(new Date());
+    const end = new Date(weekStart); end.setDate(end.getDate() + 6);
+    const sm = weekStart.getMonth() + 1, em = end.getMonth() + 1;
+    document.getElementById('cal-month-label').textContent =
+      `${sm}월 ${weekStart.getDate()}일 – ${em !== sm ? em + '월 ' : ''}${end.getDate()}일`;
+
+    const filter   = getFilter();
+    const attended = getAttended();
+    const custom   = getCustom();
+    const apps     = getApps();
+    const notes    = getNotes();
+    const mode     = getCalMode();
+    let html = '';
+
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(weekStart); day.setDate(day.getDate() + i);
+      const ds  = ymd(day);
+      const dayAtt = attended[ds] || [];
+      const recsFor = (app, s) => dayAtt.filter(r => r.appId === app.id && (!r.time || r.time === s.time));
+      const noteOf  = (app, s) => notes[`${app.id}__${ds}__${s.time || ''}`] || {};
+
+      // 월간과 같은 규칙: 필터에 안 걸려도 내가 기록한 회차는 남긴다
+      const sess = apps.flatMap(app => (schedules[app.id] || [])
+        .filter(s => s.date === ds)
+        .map(s => {
+          const recs = recsFor(app, s);
+          const note = noteOf(app, s);
+          const mine = recs.length > 0 || (note.photoIds || []).length > 0;
+          return { s, app, recs, note, mine };
+        })
+        .filter(x => x.mine || (mode !== 'mine' && matchesFilter(x.s, app, filter))))
+        .sort((a, b) => (a.s.time || '').localeCompare(b.s.time || ''));
+      const customs = custom.filter(e => e.date === ds)
+        .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+
+      // '내 기록' 에서는 빈 날을 아예 뺀다
+      if (mode === 'mine' && !sess.length && !customs.length) continue;
+
+      const past = ds < todayStr;
+      const sessHtml = sess.map(({ s, app, recs, note, mine }) => {
+        const cast = getActorFields(s).map(k => s[k]).filter(Boolean)
+          .map(n => actorOn(filter, app.id, n) ? `<b>${n}</b>` : n).join(' · ');
+        const att   = recs.filter(r => !r.transferred);
+        const trans = !att.length && recs.find(r => r.transferred);
+        const mark = att.length
+          ? `<span class="wk-mark ${past ? 'att' : 'booked'}">${past ? '✓ 관람' : '🎫 예매'}${att.length > 1 ? ' ×' + att.length : ''}</span>`
+          : trans ? `<span class="wk-mark trans">↪ 양도${trans.transferTo ? ' · ' + trans.transferTo : ''}</span>` : '';
+        const seat = att.map(fmtSeat).filter(Boolean).join(', ');
+        const extra = [(note.photoIds || []).length ? '📷' : '', note.memo ? '📝' : ''].filter(Boolean).join(' ');
+        const evs = eventsOn(app.id, ds).map(e => {
+          const c = e.color || app.color;
+          return `<span class="wk-ev" style="${appStyle(c)}" ${e.description ? `title="${e.description.replace(/"/g, '&quot;')}"` : ''}>${e.name}</span>`;
+        }).join('');
+        return `<div class="wk-sess${mine ? '' : ' plain'}${trans ? ' transferred' : ''}" onclick="openDay('${ds}')">
+          <div class="wk-bar" style="background:${app.color}"></div>
+          <div class="wk-time">${s.time || '—'}</div>
+          <div class="wk-body">
+            <div class="wk-line1">
+              <span class="wk-app" style="color:${app.color}">${app.icon ? app.icon + ' ' : ''}${app.name}</span>
+              ${mark}${seat ? `<span class="wk-seat">${seat}</span>` : ''}
+              ${extra ? `<span class="wk-note">${extra}</span>` : ''}
+            </div>
+            ${cast ? `<div class="wk-cast">${cast}</div>` : ''}
+            ${evs ? `<div class="wk-evs">${evs}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+
+      const customHtml = customs.map(e => {
+        const col = e.color || COLOR_PALETTE[0];
+        return `<div class="wk-sess" onclick="openDay('${ds}')">
+          <div class="wk-bar" style="background:${col}"></div>
+          <div class="wk-time">${e.time || '—'}</div>
+          <div class="wk-body">
+            <div class="wk-line1"><span class="wk-app" style="color:${col}">${e.name}</span>
+              ${(e.photoIds || []).length ? '<span class="wk-note">📷</span>' : ''}</div>
+            ${e.comment ? `<div class="wk-cast">${e.comment}</div>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+
+      const dow = day.getDay();
+      const hdCls = ['wk-day-hd', dow === 0 ? 'sunday' : '', dow === 6 ? 'saturday' : ''].filter(Boolean).join(' ');
+      const empty = !sess.length && !customs.length;
+      const dayCls = ['wk-day', ds === todayStr ? 'today' : '', past ? 'past' : ''].filter(Boolean).join(' ');
+      html += `<div class="${dayCls}">
+        <div class="${hdCls}" onclick="openDay('${ds}')">
+          ${day.getMonth() + 1}/${day.getDate()} (${DOW[dow]})
+          ${ds === todayStr ? '<span class="wk-today">오늘</span>' : ''}
+          ${empty ? '<span class="wk-empty">공연 없음</span>' : ''}
+        </div>
+        ${sessHtml}${customHtml}
+      </div>`;
+    }
+
+    document.getElementById('cal-week').innerHTML = html ||
+      '<div class="loading">이번 주에는 기록한 회차가 없습니다</div>';
+    renderCalModeButtons();
+
+    // 이번 주를 처음 열 때만 오늘로 내려간다. 이벤트가 늦게 와서 다시 그릴 때마다 튀면 안 된다.
+    const key = ymd(weekStart);
+    if (_weekScrolled !== key) {
+      _weekScrolled = key;
+      // 이미 화면 안에 있으면 그대로 둔다. 내릴 때는 고정 헤더 높이만큼 덜 내린다.
+      const t = document.querySelector('#cal-week .wk-day.today');
+      if (t) {
+        const hd = document.querySelector('.header').offsetHeight;
+        const r  = t.getBoundingClientRect();
+        if (r.top < hd || r.bottom > innerHeight) scrollTo(0, scrollY + r.top - hd - 12);
+      }
+    }
+  }
+  let _weekScrolled = null;
+
   function renderCalendar() {
+    const view = getCalView();
+    renderCalViewButtons(view);
+    if (view === 'week') { renderWeek(); return; }
     document.getElementById('cal-month-label').textContent = `${currentYear}년 ${currentMonth + 1}월`;
     const first    = new Date(currentYear, currentMonth, 1).getDay();
     const days     = new Date(currentYear, currentMonth + 1, 0).getDate();
@@ -1507,17 +1846,12 @@
       const cast = getActorFields(s).map(f => s[f]).filter(Boolean).join(' · ');
       const attRecs = dayAtt.filter(r => r.appId === s._app.id && (!r.time || r.time === s.time));
       const attHtml = attRecs.map(r => {
-        let seat = '';
-        if (r.seatZone && r.seatRow) {
-          seat = [r.seatZone + '구역', r.seatRow + '열', r.seatNumber != null ? r.seatNumber + '번' : ''].filter(Boolean).join(' ');
-        } else if (r.seatZone) {
-          seat = [r.seatZone + '열', r.seatNumber != null ? r.seatNumber + '번' : ''].filter(Boolean).join(' ');
-        } else if (r.seatNumber != null) {
-          seat = r.seatNumber + '번';
-        }
+        const seat = fmtSeat(r);
         const mark = r.transferred
           ? `<span class="session-transferred">↪ 양도${r.transferTo ? ' · ' + r.transferTo : ''}</span>`
-          : '<span class="session-attended">✓ 관람</span>';
+          : ds < todayStr
+            ? '<span class="session-attended">✓ 관람</span>'
+            : '<span class="session-booked">🎫 예매</span>';
         return `<div class="session-meta">${mark}${seat ? `&nbsp;&nbsp;${seat}` : ''}</div>`;
       }).join('');
       const noteKey = `${s._app.id}__${ds}__${s.time || ''}`;
@@ -1545,6 +1879,8 @@
           <span class="session-tag" style="${appStyle(s._app.color)}">${s._app.name}</span>
           <div class="session-cast">${cast}</div>
           ${attHtml}
+          ${(evs => evs ? `<div class="wk-evs">${evs}</div>` : '')(eventsOn(s._app.id, ds).map(e =>
+            `<span class="wk-ev" style="${appStyle(e.color || s._app.color)}">${e.name}</span>`).join(''))}
           ${noteRow}
         </div>
       </div>`;
@@ -1668,25 +2004,59 @@
     if (!index.size) { box.innerHTML =
       '<div class="hint">스케줄을 불러오면 배우 목록이 나옵니다.</div>'; return; }
 
-    // 작품 — 안 고르면 전체
-    const appChips = apps.filter(a => (schedules[a.id] || []).length).map(app => {
-      const on = f.apps.includes(app.id);
-      const st = on ? `background:${hexToRgba(app.color,0.16)};color:${app.color};border-color:${hexToRgba(app.color,0.36)}` : '';
-      return `<button class="chip${on ? ' on' : ''}" style="${st}"
-        onclick="toggleFilterApp('${app.id}')">${app.icon ? app.icon + ' ' : ''}${app.name}</button>`;
-    }).join('');
+    const onStyle = color =>
+      `background:${hexToRgba(color,0.16)};color:${color};border-color:${hexToRgba(color,0.36)}`;
+    const withRows = apps.filter(a => (schedules[a.id] || []).length);
+    const live = withRows.filter(a => !isFinished(a.id));
+    const done = withRows.filter(a =>  isFinished(a.id));
 
-    // 배우 — 작품을 가로질러 한 목록. 여러 작품에 나오면 그 작품들의 색 점을 붙인다.
-    const actorChips = [...index.entries()].map(([name, inApps]) => {
-      const on = f.actors.includes(name);
-      const lead = inApps[0];
-      const st = on ? `background:${hexToRgba(lead.color,0.16)};color:${lead.color};border-color:${hexToRgba(lead.color,0.36)}` : '';
-      const dots = inApps.length > 1
-        ? ' ' + inApps.map(a => `<span class="actor-dot" style="background:${a.color}"></span>`).join('')
-        : '';
-      return `<button class="chip${on ? ' on' : ''}" style="${st}"
-        onclick="toggleFilterActor('${name.replace(/'/g, "\\'")}')">${name}${dots}</button>`;
-    }).join('');
+    // 끝난 공연에서 고른 게 있으면 접어두면 안 보여서 헷갈린다
+    if (_filterDoneOpen === null) {
+      _filterDoneOpen = done.some(a => f.apps.includes(a.id) ||
+        [...index.entries()].some(([n, inApps]) => f.actors.includes(n) && inApps.every(x => isFinished(x.id))));
+    }
+
+    // 작품 — 안 고르면 전체
+    const appChip = app => {
+      const on = f.apps.includes(app.id);
+      return `<button class="chip${on ? ' on' : ''}" style="${on ? onStyle(app.color) : ''}"
+        onclick="toggleFilterApp('${app.id}')">${app.icon ? app.icon + ' ' : ''}${app.name}</button>`;
+    };
+
+    // 배우 — 작품별로 묶는다. 여러 작품에 나오면 각 작품 아래 다 나오고,
+    // 고르는 건 이름 단위라 하나를 누르면 모든 작품에서 같이 켜진다.
+    // 작품마다 접어두고, 고른 배우는 소제목 옆에 작게 적어 접힌 채로도 보이게 한다.
+    const actorGroup = app => {
+      const names = [...index.entries()]
+        // actorIndex 는 getApps() 를 따로 읽어 객체가 다르다. id 로 비교한다.
+        .filter(([, inApps]) => inApps.some(a => a.id === app.id))
+        .map(([name]) => name);
+      const picked = names.filter(n => actorOn(f, app.id, n));
+      const open = _filterOpenGroups.has(app.id);
+      const chips = open ? names.map(name => {
+          const on = picked.includes(name);
+          return `<button class="chip${on ? ' on' : ''}" style="${on ? onStyle(app.color) : ''}"
+            onclick="toggleFilterActor('${name.replace(/'/g, "\\'")}','${app.id}')">${name}</button>`;
+        }).join('') : '';
+      return `<button class="filter-group" onclick="toggleFilterGroup('${app.id}')">
+          <span class="filter-group-dot" style="background:${app.color}"></span>
+          <span class="filter-group-name">${app.icon ? app.icon + ' ' : ''}${app.name}</span>
+          ${picked.length ? `<span class="filter-group-picked" style="color:${app.color}">· ${picked.join(', ')}</span>` : ''}
+          <span class="app-group-caret">${open ? '▴' : '▾'}</span>
+        </button>
+        ${open ? `<div class="actor-list">${chips}</div>` : ''}`;
+    };
+
+    const doneToggle = done.length ? `
+      <button class="app-group" onclick="toggleFilterDone()">
+        <span>종료된 공연 ${done.length}</span>
+        <span class="app-group-caret">${_filterDoneOpen ? '▴' : '▾'}</span>
+      </button>` : '';
+
+    const appChips = live.map(appChip).join('') +
+      (_filterDoneOpen ? done.map(appChip).join('') : '');
+    const actorChips = live.map(actorGroup).join('') + doneToggle +
+      (_filterDoneOpen ? done.map(actorGroup).join('') : '');
 
     const summary = filterActive()
       ? `<div class="filter-summary">
@@ -1699,9 +2069,23 @@
       `<div class="section-title" style="border-top:none;padding-top:2px">작품</div>
        <div class="hint">아무것도 안 고르면 전체 작품을 봅니다.</div>
        <div class="actor-list">${appChips}</div>
+       ${doneToggle}
        <div class="section-title">배우</div>
-       <div class="hint">작품에 상관없이 고릅니다. 작품과 함께 고르면 그 작품의 해당 배우 회차만 보입니다.</div>
-       <div class="actor-list">${actorChips}</div>`;
+       <div class="hint">이름 단위로 고릅니다. 여러 작품에 나오는 배우는 한 번 누르면 모든 작품에서 같이 켜집니다. 작품과 함께 고르면 그 작품의 해당 배우 회차만 보입니다.</div>
+       ${actorChips}`;
+  }
+
+  // 종료된 공연 펼침 — null 이면 열 때 고른 게 있는지 보고 정한다
+  let _filterDoneOpen = null;
+  // 배우 목록을 펼친 작품 id
+  const _filterOpenGroups = new Set();
+  function toggleFilterGroup(id) {
+    if (_filterOpenGroups.has(id)) _filterOpenGroups.delete(id); else _filterOpenGroups.add(id);
+    renderActorFilters();
+  }
+  function toggleFilterDone() {
+    _filterDoneOpen = !_filterDoneOpen;
+    renderActorFilters();
   }
 
   function toggleFilterApp(id) {
@@ -1712,10 +2096,25 @@
     renderActorFilters(); renderCalendar();
   }
 
-  function toggleFilterActor(name) {
+  function toggleFilterActor(name, appId) {
     const f = getFilter();
-    const i = f.actors.indexOf(name);
-    if (i === -1) f.actors.push(name); else f.actors.splice(i, 1);
+    const k = offKey(appId, name);
+    const dropName = () => {
+      f.actors = f.actors.filter(n => n !== name);
+      f.off = f.off.filter(x => !x.endsWith('|' + name));
+    };
+    if (!f.actors.includes(name)) {
+      // 처음 켜면 모든 작품에서 같이 켜진다
+      f.actors.push(name);
+      f.off = f.off.filter(x => !x.endsWith('|' + name));
+    } else if (f.off.includes(k)) {
+      f.off = f.off.filter(x => x !== k);
+    } else {
+      // 이 작품만 끈다. 다른 작품에서도 다 꺼져 있으면 이름째 지운다.
+      f.off.push(k);
+      const stillOn = (actorIndex().get(name) || []).some(a => actorOn(f, a.id, name));
+      if (!stillOn) dropName();
+    }
     saveFilter(f);
     renderActorFilters(); renderCalendar();
   }
@@ -1743,6 +2142,8 @@
     document.getElementById('af-records-key').value = '';
     renderColorPicker('af-colors', COLOR_PALETTE[0]);
     renderPresets();
+    loadPresetDates();
+    setManualForm(false);
     document.getElementById('ov-settings').classList.remove('open');
     document.getElementById('ov-app-form').classList.add('open');
   }
@@ -1791,7 +2192,25 @@
       </button>`;
   }
 
-  // 프리셋 값을 아래 "직접 추가" 폼에 채워서, 아이콘 등을 원하는 대로 바꾼 뒤 저장하게 함
+  function setManualForm(open) {
+    document.getElementById('af-manual').hidden = !open;
+    document.querySelector('#af-manual-toggle .app-group-caret').textContent = open ? '▴' : '▾';
+  }
+  function toggleManualForm() {
+    const open = document.getElementById('af-manual').hidden;
+    if (open) {
+      // 프리셋으로 채워졌던 값이 남아 있으면 안 된다
+      _presetFormId = null;
+      ['af-name','af-icon','af-schedule-url','af-app-url','af-records-key']
+        .forEach(id => document.getElementById(id).value = '');
+      renderColorPicker('af-colors', COLOR_PALETTE[0]);
+    }
+    setManualForm(open);
+    if (open) document.getElementById('af-name').scrollIntoView({block: 'center', behavior: 'smooth'});
+  }
+
+  // 알려진 앱은 고칠 게 거의 없어 폼을 거치지 않고 바로 추가한다.
+  // 여러 개를 연달아 넣을 수 있게 창은 열어둔다.
   function fillPresetForm(id) {
     const preset = allPresets().find(p => p.id === id);
     if (!preset) return;
@@ -1803,7 +2222,7 @@
     document.getElementById('af-app-url').value = preset.appUrl;
     document.getElementById('af-records-key').value = preset.recordsKey || '';
     renderColorPicker('af-colors', preset.color);
-    document.getElementById('af-name').scrollIntoView({block: 'center', behavior: 'smooth'});
+    saveAppForm(true);
   }
 
   function closeAppForm() {
@@ -1811,7 +2230,7 @@
     openSettings();
   }
 
-  async function saveAppForm() {
+  async function saveAppForm(keepOpen) {
     const name        = document.getElementById('af-name').value.trim();
     const icon        = document.getElementById('af-icon').value.trim();
     const scheduleUrl = document.getElementById('af-schedule-url').value.trim();
@@ -1831,13 +2250,19 @@
     try {
       schedules[id] = await fetch(scheduleUrl).then(r => r.json());
     } catch {}
+    loadEvents([app]);
     _presetFormId = null;
     renderTabs();
     renderFrames();
     refreshStatus();
+    renderCalendar();
+    if (keepOpen) {
+      renderPresetList();
+      toast(`${name} 추가됨`);
+      return;
+    }
     document.getElementById('ov-app-form').classList.remove('open');
     openSettings();
-    renderCalendar();
   }
 
   // ── PhotoDB (IndexedDB) ──
@@ -2167,6 +2592,7 @@
       refreshStatus(failed);
       renderTabs();
       renderCalendar();        // getAttended() 가 여기서 각 앱 기록을 다시 읽는다
+      await loadEvents(apps);
       await discoverApps(true);
     } finally {
       // 중간에 터지면 버튼이 계속 돌고 두 번 다시 못 누르게 된다
@@ -2223,6 +2649,7 @@
 
     renderTabs();          // 스케줄이 있어야 '공연 종료' 판정이 되므로 다시 그린다
     renderCalendar();
+    loadEvents(apps);      // 주간 보기에 붙일 특전·이벤트 (백그라운드)
 
     discoverApps(true);    // 새 작품 자동 발견 (백그라운드, 실패해도 조용히)
   }
