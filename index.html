@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>m.diary</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="/otk-schedule/icon-192-v2.png">
+  <link rel="apple-touch-icon" href="icon-192-v2.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="m.diary">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -130,6 +130,19 @@
     #app-frames.active { display: block; flex: 1; }
     .app-frame { position: absolute; inset: 0; border: none; display: none; width: 100%; height: 100%; }
     .app-frame.active { display: block; }
+    /* 기타 공연 탭 — iframe 대신 허브가 그리는 목록 */
+    .extra-page { overflow-y: auto; padding: 14px 16px 40px; background: var(--bg1); }
+    .xp-show { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+    .xp-name { font-size: 16px; font-weight: 800; }
+    .xp-info { font-size: 12px; color: var(--text3); margin-top: 4px; line-height: 1.5; }
+    .xp-link { display: inline-block; font-size: 12px; margin-top: 6px; color: var(--text2); }
+    .xp-list { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+    .xp-sess { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 8px 10px; border-radius: 8px;
+               border: 1px solid var(--border); cursor: pointer; font-size: 13px; }
+    .xp-sess.mine { border-color: var(--text3); background: var(--bg3); }
+    .xp-when { font-weight: 700; min-width: 98px; }
+    .xp-cast { color: var(--text2); }
+    .xp-mark { margin-left: auto; font-size: 12px; font-weight: 700; }
 
     .cal-nav {
       display: flex; justify-content: space-between; align-items: center;
@@ -623,6 +636,39 @@
   </div>
 </div>
 
+<!-- 기타 공연 예매 기록 (앱이 없는 공연은 허브가 직접 받는다) -->
+<div class="overlay" id="ov-extra-rec" onclick="closeOnBg(event,'ov-extra-rec')">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="custom-hd">
+      <div class="custom-title" id="xr-title">예매 기록</div>
+      <button class="custom-close" onclick="closeExtraRec()">✕</button>
+    </div>
+    <div class="form-row"><div class="form-label" id="xr-when"></div></div>
+    <div class="form-row">
+      <div class="form-label">좌석 (선택)</div>
+      <div style="display:flex;gap:6px">
+        <input class="form-input" type="text" id="xr-zone" placeholder="열 (예: B)" style="flex:1">
+        <input class="form-input" type="number" id="xr-num" placeholder="번호" style="flex:1">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-label">가격 (선택)</div>
+      <input class="form-input" type="number" id="xr-price" placeholder="예: 90000">
+    </div>
+    <div class="form-row">
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px">
+        <input type="checkbox" id="xr-trans" onchange="document.getElementById('xr-trans-to').hidden=!this.checked"> 양도함 (관람으로 치지 않음)
+      </label>
+      <input class="form-input" type="text" id="xr-trans-to" placeholder="양도 받은 사람 (선택)" hidden style="margin-top:6px">
+    </div>
+    <div class="form-actions">
+      <button class="btn-cancel" id="xr-del" onclick="deleteExtraRec()">기록 삭제</button>
+      <button class="btn-primary" onclick="saveExtraRec()">저장</button>
+    </div>
+  </div>
+</div>
+
 <!-- 설정 -->
 <div class="overlay" id="ov-settings" onclick="closeOnBg(event,'ov-settings')">
   <div class="sheet" id="sheet-settings">
@@ -761,10 +807,14 @@
 </div>
 
 <script>
-  const APPS_KEY   = 'hub_apps';
-  const PREFS_KEY  = 'hub_prefs';
-  const THEME_KEY  = 'hub_theme';
-  const CUSTOM_KEY = 'hub_custom';
+  // 테스트 사본(/otk-test/)은 같은 주소(origin)라 실제 허브와 저장소를 같이 쓴다.
+  // 설정 키만 따로 두어 섞이지 않게 한다. 관람 기록(<작품>_records)은 그대로 같이 읽는다.
+  const IS_TEST_HUB = location.pathname.startsWith('/otk-test/');
+  const HUB_NS = IS_TEST_HUB ? 'test_hub_' : 'hub_';
+  const APPS_KEY   = HUB_NS + 'apps';
+  const PREFS_KEY  = HUB_NS + 'prefs';
+  const THEME_KEY  = HUB_NS + 'theme';
+  const CUSTOM_KEY = HUB_NS + 'custom';
   const DOW        = ['일','월','화','수','목','금','토'];
 
   const COLOR_PALETTE = [
@@ -866,8 +916,84 @@
   // musical-otk 계정의 저장소를 훑어 schedule.json 이 있는 것을 프리셋 후보로 만든다.
   // (musical-otk 은 조직이 아니라 사용자 계정이라 /users 를 쓴다. /orgs 는 404)
   const ORG = 'musical-otk';
-  const NON_DIARY = ['admin', 'sample', 'otk-schedule', '.github'];
-  const DISCOVERED_KEY = 'hub_discovered';
+  const NON_DIARY = ['admin', 'sample', 'otk-schedule', 'otk-test', 'musical-otk.github.io', '.github'];
+  // 저장소 하나에 작품을 폴더로 모은 경우의 목록. [{ "path": "ever2026/" }] — 나머지 정보는 앱에서 읽는다.
+  // 실제: musical-otk.github.io 저장소 루트 / 테스트 사본: /otk-test/apps.json
+  const APPS_INDEX_URL = IS_TEST_HUB
+    ? new URL('apps.json', location.href.replace(/[^/]*$/, '')).href
+    : `https://${ORG}.github.io/apps.json`;
+  const DISCOVERED_KEY = HUB_NS + 'discovered';
+
+  // ── 기타 공연 (콘서트처럼 앱 없이 일정만 있는 공연) ──
+  // apps.json 에 { "path": "hwinter2026/", "app": false } 로 올리고, 폴더에는 show.json + schedule.json 만 둔다.
+  // 허브에서는 공연마다 작품을 만들지 않고 '기타' 하나로 묶는다. 회차에는 공연 이름(_show)을 붙인다.
+  // schedule.json 의 배우 칸(cast1, cast2 …)은 작품 앱과 같은 모양이라 배우 필터가 그대로 걸린다.
+  const EXTRA_ID = 'app_extra';
+  const EXTRA_OFF_KEY = HUB_NS + 'extra_off';   // 사용자가 '기타'를 지웠으면 다시 넣지 않는다
+  const EXTRA_APP = {
+    id: EXTRA_ID, name: '기타', icon: '🎤', color: '#8A8A99', kind: 'extra',
+    scheduleUrl: APPS_INDEX_URL + '#extra', appUrl: '', deepLink: false,
+    recordsKey: HUB_NS + 'extra_records',      // 앱이 없으니 예매 기록은 허브가 갖는다
+  };
+  let extraShows = [];   // [{ id, name, icon, venue, price, url, firstDate, lastDate }]
+
+  async function extraEntries() {
+    try {
+      const r = await fetch(APPS_INDEX_URL, { cache: 'no-cache' });
+      if (!r.ok) return [];
+      const list = await r.json();
+      return (Array.isArray(list) ? list : [])
+        .filter(x => x && x.app === false && typeof x.path === 'string' && x.path)
+        .map(x => new URL(x.path.replace(/\/?$/, '/'), APPS_INDEX_URL).href);
+    } catch { return []; }
+  }
+  async function loadExtraSchedule() {
+    const urls = await extraEntries();
+    const shows = [], rows = [];
+    await Promise.all(urls.map(async base => {
+      try {
+        const [info, sch] = await Promise.all([
+          fetch(base + 'show.json', { cache: 'no-cache' }).then(r => r.json()),
+          fetch(base + 'schedule.json', { cache: 'no-cache' }).then(r => r.json()),
+        ]);
+        if (!Array.isArray(sch)) return;
+        const id = base.replace(/\/$/, '').split('/').pop();
+        const dates = sch.map(s => s.date).filter(Boolean).sort();
+        shows.push({ id, name: info.name || id, icon: info.icon || '', venue: info.venue || '',
+                     price: info.price || '', url: info.url || '', firstDate: dates[0], lastDate: dates[dates.length - 1] });
+        sch.forEach(s => rows.push({ ...s, _show: info.name || id, _showId: id }));
+      } catch {}
+    }));
+    extraShows = shows.sort((a, b) => (a.firstDate || '').localeCompare(b.firstDate || ''));
+    return rows;
+  }
+  // 작품 앱은 schedule.json 하나, '기타'는 여러 공연을 모은다
+  async function loadSchedule(app, opts) {
+    if (app.kind === 'extra') return loadExtraSchedule();
+    const r = await fetch(app.scheduleUrl, opts);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }
+  // 기타 공연이 하나라도 올라와 있으면 '기타'를 기본으로 켠다
+  async function ensureExtraApp() {
+    if (localStorage.getItem(EXTRA_OFF_KEY)) return;
+    const apps = getApps();
+    if (apps.some(a => a.id === EXTRA_ID)) return;
+    if (!(await extraEntries()).length) return;
+    apps.push({ ...EXTRA_APP });
+    saveApps(apps);
+  }
+  function addExtraApp() {
+    localStorage.removeItem(EXTRA_OFF_KEY);
+    const apps = getApps();
+    if (!apps.some(a => a.id === EXTRA_ID)) { apps.push({ ...EXTRA_APP }); saveApps(apps); }
+    loadSchedule(EXTRA_APP).then(rows => {
+      schedules[EXTRA_ID] = rows;
+      renderTabs(); renderFrames(); renderCalendar(); renderPresetList();
+    });
+  }
+  // 회차 이름 — '기타'는 공연 이름으로
+  const sessName = (app, s) => (s && s._show) || app.name;
   const PALETTE_FALLBACK = ['#7aacff','#f06070','#C09870','#0284c7','#1A6B72','#8B1A1A','#7B3FC4','#4CAF50'];
 
   function getDiscovered() {
@@ -879,14 +1005,16 @@
   //   manifest.json — 작품명(short_name), 색(theme_color)
   //   index.html    — 이모지(<title>), 기록 키(APP_PREFIX), 딥링크 지원 여부
   // recordsKey 를 못 읽으면 허브 달력에 관람 기록이 하나도 안 뜬다. 그게 핵심이다.
-  async function readAppMeta(appUrl) {
-    const meta = { name: '', icon: '', color: '', recordsKey: null, deepLink: undefined };
-
+  // manifest 는 작아서 매번 다시 읽는다 — 작품 색·이름을 바꾸면 다음 탐색 때 바로 따라온다
+  async function readManifestMeta(appUrl) {
     try {
       const m = await (await fetch(appUrl + 'manifest.json', { cache: 'no-cache' })).json();
-      meta.name  = m.short_name || m.name || '';
-      meta.color = m.theme_color || '';
-    } catch {}
+      return { name: m.short_name || m.name || '', color: m.theme_color || '' };
+    } catch { return {}; }
+  }
+  async function readAppMeta(appUrl) {
+    const meta = { name: '', icon: '', color: '', recordsKey: null, deepLink: undefined,
+                   ...(await readManifestMeta(appUrl)) };
 
     try {
       const html = await (await fetch(appUrl + 'index.html', { cache: 'no-cache' })).text();
@@ -912,55 +1040,81 @@
     return meta;
   }
 
-  async function discoverApps(silent) {
+  // 폴더 작품 목록 — 파일이 없거나 깨져도 저장소 탐색은 계속한다
+  async function folderAppUrls() {
     try {
-      const res = await fetch(`https://api.github.com/users/${ORG}/repos?per_page=100&sort=updated`);
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const repos = await res.json();
-      const cands = repos
-        .map(r => r.name)
-        .filter(n => !n.startsWith('_') && !NON_DIARY.includes(n));
+      const r = await fetch(APPS_INDEX_URL, { cache: 'no-cache' });
+      if (!r.ok) return [];
+      const list = await r.json();
+      return (Array.isArray(list) ? list : [])
+        .filter(x => x && x.app !== false && typeof x.path === 'string' && x.path)   // app:false 는 '기타' 공연
+        .map(x => new URL(x.path.replace(/\/?$/, '/'), APPS_INDEX_URL).href);
+    } catch { return []; }
+  }
 
-      // schedule.json 이 실제로 있는 저장소만 남긴다
-      const found = [];
-      // 이미 읽어둔 것은 다시 받지 않는다. 앱 코드가 190KB 라 매번 받으면 무겁다.
-      const cached = {};
-      getDiscovered().forEach(d => { if (d.recordsKey) cached[d.scheduleUrl] = d; });
-
-      await Promise.all(cands.map(async (name, i) => {
-        const appUrl = `https://${ORG}.github.io/${name}/`;
-        const url = appUrl + 'schedule.json';
-        try {
-          const r = await fetch(url, { method: 'GET', cache: 'no-cache' });
-          if (!r.ok) return;
-          const rows = await r.json();
-          if (!Array.isArray(rows) || !rows.length) return;
-          const last = rows.reduce((m, x) => (x.date && x.date > m ? x.date : m), '');
-          const meta = cached[url] || await readAppMeta(appUrl);
-          found.push({
-            id: 'app_' + name.replace(/[^a-z0-9]/gi, '_'),
-            // 저장소 이름(ikkisup2026, stone2026_v2)이 그대로 뜨면 알아보기 어렵다.
-            name: meta.name || name,
-            icon: meta.icon || '',
-            scheduleUrl: url,
-            appUrl,
-            color: meta.color || PALETTE_FALLBACK[i % PALETTE_FALLBACK.length],
-            recordsKey: meta.recordsKey || null,
-            deepLink: meta.deepLink,
-            lastDate: last
-          });
-        } catch {}
-      }));
-
-      found.sort((a, b) => (b.lastDate || '').localeCompare(a.lastDate || ''));
-      localStorage.setItem(DISCOVERED_KEY, JSON.stringify(found));
-      // 앱 추가 창을 열어둔 채 백그라운드 발견이 끝나면 날짜 분류를 다시 그린다
-      if (!silent || document.getElementById('ov-app-form').classList.contains('open')) renderPresetList();
-      return found;
-    } catch (e) {
-      if (!silent) alert('저장소 목록을 불러오지 못했습니다: ' + e.message);
+  async function discoverApps(silent) {
+    // ① 저장소마다 앱 하나 (기존 방식) ② 통합 저장소 안 폴더마다 앱 하나 (apps.json)
+    // 둘 중 하나가 막혀도(GitHub API 제한 등) 나머지는 살린다
+    let repoErr = null;
+    const repoUrls = await (async () => {
+      try {
+        const res = await fetch(`https://api.github.com/users/${ORG}/repos?per_page=100&sort=updated`);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const repos = await res.json();
+        return repos
+          .map(r => r.name)
+          .filter(n => !n.startsWith('_') && !NON_DIARY.includes(n))
+          .map(n => `https://${ORG}.github.io/${n}/`);
+      } catch (e) { repoErr = e; return []; }
+    })();
+    const folderUrls = await folderAppUrls();
+    // 같은 주소가 두 번 나오면 한 번만 (폴더 이름이 저장소 이름과 겹치면 저장소가 그 주소를 차지한다)
+    const appUrls = [...new Set([...repoUrls, ...folderUrls])];
+    if (!appUrls.length && repoErr) {
+      if (!silent) alert('저장소 목록을 불러오지 못했습니다: ' + repoErr.message);
       return getDiscovered();
     }
+
+    // schedule.json 이 실제로 있는 앱만 남긴다
+    const found = [];
+    // 이미 읽어둔 것은 다시 받지 않는다. 앱 코드가 190KB 라 매번 받으면 무겁다.
+    const cached = {};
+    getDiscovered().forEach(d => { if (d.recordsKey) cached[d.scheduleUrl] = d; });
+
+    await Promise.all(appUrls.map(async (appUrl, i) => {
+      const url = appUrl + 'schedule.json';
+      // 저장소 이름이든 폴더 이름이든 주소의 마지막 칸
+      const name = appUrl.replace(/\/$/, '').split('/').pop();
+      try {
+        const r = await fetch(url, { method: 'GET', cache: 'no-cache' });
+        if (!r.ok) return;
+        const rows = await r.json();
+        if (!Array.isArray(rows) || !rows.length) return;
+        const last = rows.reduce((m, x) => (x.date && x.date > m ? x.date : m), '');
+        // index.html(190KB)은 한 번만 읽고, manifest 의 이름·색은 매번 새로
+        const meta = cached[url]
+          ? { ...cached[url], ...Object.fromEntries(Object.entries(await readManifestMeta(appUrl)).filter(([, v]) => v)) }
+          : await readAppMeta(appUrl);
+        found.push({
+          id: 'app_' + name.replace(/[^a-z0-9]/gi, '_'),
+          // 저장소 이름(ikkisup2026, stone2026_v2)이 그대로 뜨면 알아보기 어렵다.
+          name: meta.name || name,
+          icon: meta.icon || '',
+          scheduleUrl: url,
+          appUrl,
+          color: meta.color || PALETTE_FALLBACK[i % PALETTE_FALLBACK.length],
+          recordsKey: meta.recordsKey || null,
+          deepLink: meta.deepLink,
+          lastDate: last
+        });
+      } catch {}
+    }));
+
+    found.sort((a, b) => (b.lastDate || '').localeCompare(a.lastDate || ''));
+    localStorage.setItem(DISCOVERED_KEY, JSON.stringify(found));
+    // 앱 추가 창을 열어둔 채 백그라운드 발견이 끝나면 날짜 분류를 다시 그린다
+    if (!silent || document.getElementById('ov-app-form').classList.contains('open')) renderPresetList();
+    return found;
   }
 
   // 프리셋 schedule.json 에서 읽은 마지막 공연일 {scheduleUrl: 'YYYY-MM-DD'}
@@ -1050,7 +1204,7 @@
   // ── 탭 숨기기 ──
   // 공연이 끝난 앱은 자동으로 가로탭에서 빠진다. 데이터는 그대로 남는다.
   // 설정에서 앱별로 '항상 표시' / '항상 숨김' 을 지정하면 자동 판정보다 우선한다.
-  const HIDDEN_KEY = 'hub_tab_visibility';   // { [appId]: 'show' | 'hide' }
+  const HIDDEN_KEY = HUB_NS + 'tab_visibility';   // { [appId]: 'show' | 'hide' }
   function getVisibility() {
     try { return JSON.parse(localStorage.getItem(HIDDEN_KEY)) || {}; }
     catch { return {}; }
@@ -1103,6 +1257,12 @@
     const apps = getApps();
     const container = document.getElementById('app-frames');
     apps.forEach(app => {
+      if (app.kind === 'extra' && !document.getElementById(`frame-${app.id}`)) {
+        const div = document.createElement('div');
+        div.id = `frame-${app.id}`;
+        div.className = 'app-frame extra-page';
+        container.appendChild(div);
+      }
       if (app.appUrl && !document.getElementById(`frame-${app.id}`)) {
         const iframe = document.createElement('iframe');
         iframe.id = `frame-${app.id}`;
@@ -1112,7 +1272,7 @@
       }
     });
     const appIds = new Set(apps.map(a => a.id));
-    container.querySelectorAll('iframe').forEach(f => {
+    container.querySelectorAll('iframe, .extra-page').forEach(f => {
       if (!appIds.has(f.id.replace('frame-', ''))) f.remove();
     });
   }
@@ -1227,6 +1387,7 @@
       if (frame) {
         frame.classList.toggle('active', isActive);
         if (isActive && frame.src === 'about:blank') frame.src = app.appUrl;
+        if (isActive && app.kind === 'extra') renderExtraPage();
       }
       if (btn) {
         btn.style.cssText = isActive
@@ -1234,6 +1395,93 @@
           : '';
       }
     });
+  }
+
+  // ── 기타 공연 탭 ── 공연마다 정보와 회차, 내 기록
+  function renderExtraPage() {
+    const box = document.getElementById(`frame-${EXTRA_ID}`);
+    if (!box) return;
+    const rows = schedules[EXTRA_ID] || [];
+    const att  = getAttended();
+    const won  = n => n ? Number(n).toLocaleString() + '원' : '';
+    box.innerHTML = extraShows.length ? extraShows.map(sh => {
+      const sess = rows.filter(s => s._showId === sh.id)
+        .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+      const list = sess.map(s => {
+        const d = new Date(s.date + 'T00:00:00');
+        const recs = (att[s.date] || []).filter(r => r.appId === EXTRA_ID && (!r.time || r.time === s.time));
+        const mine = recs.find(r => !r.transferred);
+        const tr   = !mine && recs.find(r => r.transferred);
+        const mark = mine ? (s.date < todayStr ? '✓ 관람' : '🎫 예매') : tr ? '↪ 양도' : '';
+        const seat = mine ? fmtSeat(mine) : '';
+        const cast = getActorFields(s).map(k => s[k]).filter(Boolean).join(' · ');
+        return `<div class="xp-sess${mine ? ' mine' : ''}" onclick="openDay('${s.date}')">
+          <span class="xp-when">${s.date.slice(5).replace('-', '.')}(${DOW[d.getDay()]}) ${s.time || ''}</span>
+          <span class="xp-cast">${cast}</span>
+          ${mark ? `<span class="xp-mark">${mark}${seat ? ' · ' + seat : ''}</span>` : ''}
+        </div>`;
+      }).join('');
+      const period = sh.firstDate && (sh.firstDate === sh.lastDate ? sh.firstDate : sh.firstDate + ' ~ ' + sh.lastDate);
+      return `<div class="xp-show">
+        <div class="xp-name">${sh.icon ? sh.icon + ' ' : ''}${sh.name}</div>
+        <div class="xp-info">${[sh.venue, sh.price && '전석 ' + won(sh.price), period].filter(Boolean).join(' · ')}</div>
+        ${sh.url ? `<a class="xp-link" href="${sh.url}" target="_blank" rel="noopener">예매처 ›</a>` : ''}
+        <div class="xp-list">${list}</div>
+      </div>`;
+    }).join('') : '<div class="loading">올라온 기타 공연이 없습니다</div>';
+  }
+
+  let _xr = null;   // 편집 중인 회차 { ds, time, show, id }
+  function extraRecords() {
+    try { return JSON.parse(localStorage.getItem(EXTRA_APP.recordsKey)) || []; } catch { return []; }
+  }
+  function saveExtraRecords(list) { localStorage.setItem(EXTRA_APP.recordsKey, JSON.stringify(list)); }
+  function openExtraRec(ds, time) {
+    const s   = (schedules[EXTRA_ID] || []).find(x => x.date === ds && (x.time || '') === time);
+    const rec = extraRecords().find(r => r.date === ds && (r.time || '') === time);
+    _xr = { ds, time, show: s ? s._show : '', id: rec ? rec.id : null };
+    const d = new Date(ds + 'T00:00:00');
+    document.getElementById('xr-title').textContent = rec ? '예매 수정' : '예매 기록';
+    document.getElementById('xr-when').textContent =
+      `${_xr.show} · ${ds.slice(5).replace('-', '.')}(${DOW[d.getDay()]}) ${time}`;
+    document.getElementById('xr-zone').value  = rec?.seatZone || '';
+    document.getElementById('xr-num').value   = rec?.seatNumber ?? '';
+    document.getElementById('xr-price').value = rec?.price || '';
+    const tr = rec?.status === '양도';
+    document.getElementById('xr-trans').checked   = tr;
+    document.getElementById('xr-trans-to').hidden = !tr;
+    document.getElementById('xr-trans-to').value  = rec?.transferTo || '';
+    document.getElementById('xr-del').style.visibility = rec ? '' : 'hidden';
+    document.getElementById('ov-detail').classList.remove('open');
+    document.getElementById('ov-extra-rec').classList.add('open');
+  }
+  function closeExtraRec() { document.getElementById('ov-extra-rec').classList.remove('open'); }
+  function afterExtraRec() {
+    closeExtraRec(); renderCalendar(); renderExtraPage(); openDay(_xr.ds);
+  }
+  function saveExtraRec() {
+    const list = extraRecords();
+    const num  = document.getElementById('xr-num').value;
+    const tr   = document.getElementById('xr-trans').checked;
+    // 작품 앱 기록과 같은 모양 — getAttended() 가 그대로 읽는다
+    const rec = {
+      id: _xr.id || 'x' + Date.now().toString(36),
+      date: _xr.ds, time: _xr.time, show: _xr.show,
+      seatZone: document.getElementById('xr-zone').value.trim(),
+      seatNumber: num === '' ? null : Number(num),
+      price: Number(document.getElementById('xr-price').value) || null,
+      status: tr ? '양도' : '',
+      transferTo: tr ? document.getElementById('xr-trans-to').value.trim() : '',
+    };
+    const i = list.findIndex(r => r.id === rec.id);
+    if (i >= 0) list[i] = rec; else list.push(rec);
+    saveExtraRecords(list);
+    afterExtraRec();
+  }
+  function deleteExtraRec() {
+    if (!_xr.id || !confirm('이 회차 예매 기록을 지울까요?')) return;
+    saveExtraRecords(extraRecords().filter(r => r.id !== _xr.id));
+    afterExtraRec();
   }
 
   function openHiddenApps() {
@@ -1299,7 +1547,7 @@
   // 작품 필터와 AND 로 묶인다:
   //   이한솔만            → 모든 작품의 이한솔 회차
   //   이한솔 + 비더슈탄트 → 비더슈탄트의 이한솔 회차만
-  const FILTER_KEY = 'hub_filter';
+  const FILTER_KEY = HUB_NS + 'filter';
   function getFilter() {
     let f = null;
     try { f = JSON.parse(localStorage.getItem(FILTER_KEY)); } catch {}
@@ -1488,7 +1736,7 @@
   // 'mine' 은 내 관람/사진만 칩으로 띄우고 나머지 회차는 흐리게 접는다.
   // 'all'  — 내 기록은 칩, 나머지 회차는 흐린 줄이나 축으로. 공연 일정 전체가 보인다.
   // 'mine' — 내가 기록한 예매/관람만. 나머지 회차는 아예 그리지 않는다.
-  const CAL_MODE_KEY = 'hub_cal_mode';
+  const CAL_MODE_KEY = HUB_NS + 'cal_mode';
   function getCalMode() {
     return localStorage.getItem(CAL_MODE_KEY) === 'mine' ? 'mine' : 'all';
   }
@@ -1545,7 +1793,7 @@
 
   // ── 월간 / 주간 ──
   // 월간 칸은 좁아 시각과 색뿐이다. 주간은 하루씩 펼쳐 캐스팅·좌석까지 한눈에 본다.
-  const CAL_VIEW_KEY = 'hub_cal_view';
+  const CAL_VIEW_KEY = HUB_NS + 'cal_view';
   let weekStart = null;   // 보고 있는 주의 일요일 (Date, 0시)
 
   function getCalView() {
@@ -1652,7 +1900,7 @@
           <div class="wk-time">${s.time || '—'}</div>
           <div class="wk-body">
             <div class="wk-line1">
-              <span class="wk-app" style="color:${app.color}">${app.icon ? app.icon + ' ' : ''}${app.name}</span>
+              <span class="wk-app" style="color:${app.color}">${app.icon ? app.icon + ' ' : ''}${sessName(app, s)}</span>
               ${mark}${seat ? `<span class="wk-seat">${seat}</span>` : ''}
               ${extra ? `<span class="wk-note">${extra}</span>` : ''}
             </div>
@@ -1869,9 +2117,12 @@
       ).join('');
       const memoSnip = note.memo ? `<span class="note-memo-snip">${note.memo.slice(0,40)}</span>` : '';
       // 좌석도처럼 앱에만 있는 것들은 허브로 끌고 오지 않고 앱으로 보낸다.
+      // 기타 공연은 앱이 없으니 허브에서 예매를 기록한다
       const jumpBtn = canJump(s._app)
         ? `<button class="jump-btn" onclick="jumpToApp('${s._app.id}','${ds}','${s.time || ''}')">${s._app.name}에서 보기 ›</button>`
-        : '';
+        : s._app.kind === 'extra'
+          ? `<button class="jump-btn" onclick="openExtraRec('${ds}','${s.time || ''}')">${attRecs.length ? '✏️ 예매 수정' : '🎫 예매 기록'}</button>`
+          : '';
       const noteRow = `<div class="note-row">
         ${thumbsHtml}
         ${memoSnip}
@@ -1881,7 +2132,7 @@
       return `<div class="session-row">
         <div class="session-time">${s.time}</div>
         <div class="session-body">
-          <span class="session-tag" style="${appStyle(s._app.color)}">${s._app.name}</span>
+          <span class="session-tag" style="${appStyle(s._app.color)}">${sessName(s._app, s)}</span>
           <div class="session-cast">${cast}</div>
           ${attHtml}
           ${(evs => evs ? `<div class="wk-evs">${evs}</div>` : '')(eventsOn(s._app.id, ds).map(e =>
@@ -2127,6 +2378,7 @@
   function deleteApp(id) {
     if (!confirm('앱을 목록에서 삭제하시겠습니까?')) return;
     saveApps(getApps().filter(a => a.id !== id));
+    if (id === EXTRA_ID) localStorage.setItem(EXTRA_OFF_KEY, '1');
     delete schedules[id];
     renderTabs();
     renderFrames();
@@ -2190,8 +2442,14 @@
       </button>
       ${_donePresetsOpen ? done.map(row).join('') : ''}` : '';
 
+    const extraRow = !getApps().some(a => a.id === EXTRA_ID)
+      ? `<div class="preset-item" onclick="addExtraApp()">
+          <div class="preset-dot" style="background:${EXTRA_APP.color}"></div>
+          <div class="preset-name">${EXTRA_APP.icon} 기타 공연 (콘서트 등)</div>
+          <div class="preset-add">+ 추가</div>
+        </div>` : '';
     document.getElementById('preset-list').innerHTML =
-      live.map(row).join('') + doneHtml +
+      live.map(row).join('') + extraRow + doneHtml +
       `<button class="add-app-btn" style="margin-top:8px" onclick="discoverApps(false)">
         🔄 저장소에서 새 작품 찾기
       </button>`;
@@ -2316,7 +2574,7 @@
   })();
 
   // ── 메모/사진 ──
-  const NOTES_KEY = 'hub_notes';
+  const NOTES_KEY = HUB_NS + 'notes';
   function getNotes() { try { return JSON.parse(localStorage.getItem(NOTES_KEY)) || {}; } catch { return {}; } }
   function saveNotes(n) { localStorage.setItem(NOTES_KEY, JSON.stringify(n)); }
 
@@ -2586,9 +2844,7 @@
     try {
       await Promise.all(apps.map(async app => {
         try {
-          const r = await fetch(app.scheduleUrl, { cache: 'no-cache' });
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          schedules[app.id] = await r.json();
+          schedules[app.id] = await loadSchedule(app, { cache: 'no-cache' });
         } catch (e) {
           failed.push(`${app.name}(${e.message})`);
         }
@@ -2633,6 +2889,7 @@
     const t = new Date();
     currentYear = t.getFullYear(); currentMonth = t.getMonth();
     syncPresetIcons();
+    await ensureExtraApp();
     renderTabs();
     renderFrames();
     await migratePhotosToIndexedDB();
@@ -2642,9 +2899,7 @@
     const failed = [];
     await Promise.all(apps.map(async app => {
       try {
-        const r = await fetch(app.scheduleUrl);
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        schedules[app.id] = await r.json();
+        schedules[app.id] = await loadSchedule(app);
       } catch (e) {
         failed.push(`${app.name}(${e.message})`);
       }
@@ -2659,7 +2914,7 @@
     discoverApps(true);    // 새 작품 자동 발견 (백그라운드, 실패해도 조용히)
   }
 
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/otk-schedule/sw.js');
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
 
   // 사진 뷰어 터치 이벤트 (passive:false 필요)
   const _pvImg = document.getElementById('photo-viewer-img');
@@ -2669,7 +2924,7 @@
   _pvImg.addEventListener('dblclick', (e) => { e.stopPropagation(); pvToggleZoom(); });
 
   // 뒤로가기 버튼: 오버레이 닫기 (PWA 앱 종료 방지)
-  const OVERLAY_CLOSE_ORDER = ['ov-photo-view','ov-note','ov-custom','ov-app-form','ov-filter','ov-settings','ov-detail'];
+  const OVERLAY_CLOSE_ORDER = ['ov-photo-view','ov-note','ov-custom','ov-extra-rec','ov-app-form','ov-filter','ov-settings','ov-detail'];
   history.pushState({pwa:true}, '');
   window.addEventListener('popstate', () => {
     history.pushState({pwa:true}, '');
