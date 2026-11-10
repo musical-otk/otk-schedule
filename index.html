@@ -197,6 +197,34 @@
     .flt-hit.on { opacity: 0.6; }
     .flt-hit-name { font-weight: 700; flex-shrink: 0; }
     .srch-past-btns { display: flex; gap: 12px; }
+    .mycal-btn { margin-top: 6px; }
+    .mycal { border: 1px solid var(--border); border-radius: 10px; padding: 6px 6px 8px; margin: 4px 0 8px; }
+    .mc-hd { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700; padding: 0 2px 2px; }
+    .mc-hd button { background: none; border: none; color: var(--text2); font-size: 15px; padding: 0 10px; cursor: pointer; }
+    .mc-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px 2px; }
+    .mc-grid em { font-style: normal; font-size: 10px; color: var(--text3); text-align: center; }
+    .mc-day { border: 1.5px solid transparent; border-radius: 6px; background: none; padding: 2px 0; height: 24px;
+      display: flex; align-items: center; justify-content: center; gap: 1px; color: var(--text1); font-size: 11px; font-family: inherit; cursor: pointer; }
+    .mc-day.off { opacity: .28; }
+    .mc-day.past span { color: var(--text3); }
+    .mc-day.today span { text-decoration: underline; }
+    .mc-day.sel { border-color: var(--custom); background: var(--custom-bg); }
+    .mc-day.sun span { color: #e06070; } .mc-day.sat span { color: var(--sat); }
+    .mc-day b { font-weight: 400; font-size: 8px; line-height: 1; white-space: nowrap; letter-spacing: -1px; }
+    .mc-day b small { font-size: 7px; color: var(--text3); letter-spacing: 0; }
+    .mc-hint { font-size: 10px; color: var(--text3); text-align: center; padding: 4px 0 0; }
+    .mc-day-box { border-top: 1px solid var(--border); margin-top: 8px; padding: 8px 2px 0; font-size: 12px; }
+    .mc-day-hd { font-weight: 700; margin-bottom: 4px; }
+    .mc-sub { color: var(--text3); font-size: 11px; }
+    .mc-sess.mine .mc-cast { color: var(--text2); }
+    .mc-lbl { color: var(--text3); font-size: 11px; margin-right: 8px; }
+    .mc-none { color: var(--text3); font-size: 11px; }
+    .mc-sess { display: grid; grid-template-columns: 40px 1fr; gap: 1px 8px; padding: 5px 0; border-top: 1px dashed var(--border); cursor: pointer; }
+    .mc-time { font-weight: 700; }
+    .mc-cast { color: var(--text1); }
+    .mc-ev { font-size: 11px; color: var(--custom); margin-left: 4px; }
+    .mc-go { display: block; margin: 6px 0 0 auto; background: none; border: none; color: var(--custom); font-size: 12px; font-weight: 600; cursor: pointer; }
+    .srch-row.flash { background: var(--custom-bg); transition: background .3s; }
     .srch-past-n { font-variant-numeric: tabular-nums; opacity: .7; }
     .flt-hit-bk { margin-left: auto; flex-shrink: 0; font-size: 11px; color: var(--text3); }
     .flt-hit-bk .n { display: inline-block; min-width: 2ch; text-align: right; font-variant-numeric: tabular-nums; }
@@ -1213,6 +1241,30 @@
     const h = getHearts(); saveHearts({ ...h, works: h.works.filter(x => x !== EXTRA_ID) });
     if (extraRecords(EXTRA_APP.recordsKey).length) { app.viaActor = true; saveApps(apps); }
     else saveApps(apps.filter(a => a.id !== EXTRA_ID));
+  }
+  // '기타'에 있던 공연이 작품 하나(정보만 작품, show_<id>)로 옮겨 가면, 기타로 남긴 예매·메모를 그 작품으로 옮긴다
+  // (H.WINTER 가 그랬다, 2026-11-10). 옮길 작품이 아직 목록에 없으면 다음에 다시 본다
+  async function migrateExtraShows() {
+    const list = extraRecords();
+    const ids = [...new Set(list.map(r => r.showId).filter(Boolean))].filter(id => allPresets().some(p => p.id === 'show_' + id));
+    if (!ids.length) return;
+    const notes = getNotes();
+    for (const id of ids) {
+      const wid = 'show_' + id;
+      if (!(await addPresetById(wid, true))) continue;
+      const key = recKeyOf(wid), mine = extraRecords(key);
+      list.filter(r => r.showId === id).forEach(r => {
+        const { showId, show, ...rec } = r;
+        if (!mine.some(x => x.date === rec.date && (x.time || '') === (rec.time || ''))) mine.push(rec);
+        const ok = noteKeyFor(EXTRA_ID, r.date, { time: r.time, _showId: id }), nk = noteKeyFor(wid, r.date, { time: r.time });
+        if (notes[ok] && !notes[nk]) { notes[nk] = notes[ok]; delete notes[ok]; }
+      });
+      saveExtraRecords(mine, key);
+      saveExtraRecords(extraRecords().filter(r => r.showId !== id));
+    }
+    saveNotes(notes);
+    if (!extraRecords().length && !getHearts().works.includes(EXTRA_ID)) dropApp(EXTRA_ID);   // 기타에 남은 게 없으면 뺀다
+    renderTabs(); renderCalendar();
   }
   // viaActor: 예매만 저장할 때 — 다른 작품처럼 ♥ 없이, 탭 없이 예매한 회차만 달력에
   function addExtraApp(viaActor) {
@@ -2372,10 +2424,10 @@
         .map(s => {
           const recs = recsFor(app, s);
           const note = noteOf(app, s);
-          const mine = recs.length > 0 || (note.photoIds || []).length > 0;
+          const mine = recs.length > 0;   // 사진만 있는 회차는 상자로 칠하지 않는다 — 앱에서 기록을 지웠는데 남아 보였다
           return { s, app, recs, note, mine };
         })
-        .filter(x => x.mine || (mode !== 'mine' && matchesFilter(x.s, app, filter))))
+        .filter(x => x.mine || (mode !== 'mine' && ((x.note.photoIds || []).length > 0 || matchesFilter(x.s, app, filter)))))
         .sort((a, b) => (a.s.time || '').localeCompare(b.s.time || ''));
       const customs = custom.filter(e => e.date === ds)
         .sort((a, b) => (a.time || '').localeCompare(b.time || ''));
@@ -2513,7 +2565,7 @@
         const attCnt = recs.filter(r => !r.transferred).length;
         const trans  = attCnt === 0 ? recs.find(r => r.transferred) : null;
         const hasPic = (notes[noteKeyFor(s._app.id, ds, s)]?.photoIds || []).length > 0;
-        (recs.length > 0 || hasPic ? marked : plain).push({ s, attCnt, hasPic, trans });
+        (recs.length > 0 ? marked : plain).push({ s, attCnt, hasPic, trans });
       });
 
       // '내 기록' 에서는 안 간 회차를 아예 그리지 않는다.
@@ -2537,7 +2589,6 @@
           <span class="sess-card-time">${fmtTime(s.time)}</span>
           ${trans ? '<span class="sess-card-icons">↪</span>' : ''}
           ${attCnt >= 2 ? `<span class="sess-card-icons">×${attCnt}</span>` : ''}
-          ${hasPic ? '<span class="sess-card-pic" title="사진 있음"></span>' : ''}
           <span class="sess-card-name">${sessName(s._app, s)}</span>
         </div>`);
 
@@ -3220,8 +3271,103 @@
   let _srchPastOpen = 0;   // 펼친 지난 회차 수 — 누를 때마다 10개씩
   const _srchActors = new Set();   // 공연 자세히에서 좁혀 보는 배우
   function toggleSrchActor(n) { if (_srchActors.has(n)) _srchActors.delete(n); else _srchActors.add(n); renderSearch(); }
+  // ── 찾기 작품 상세의 '내 달력' — 회차를 고를 때 내가 비는 날을 본다 ──
+  // 칸 = 내 일정(예매·관람 기록은 작품 아이콘, + 내 일정은 📌). 이 작품 회차가 없는 날(배우 필터를 걸면 그 배우 회차가 없는 날)은 흐리게.
+  // 날짜를 누르면 달력 아래에 그날 정리 — 내 일정, 이 작품 회차(캐스팅·이벤트), 목록에서 보기
+  const MYCAL_KEY = HUB_NS + 'mycal_open';
+  let _myCalYM = null, _myCalSel = null;   // 보고 있는 달 'YYYY-MM', 고른 날 — 작품을 바꾸면 비운다
+  function toggleMyCal() {
+    try { localStorage.setItem(MYCAL_KEY, localStorage.getItem(MYCAL_KEY) ? '' : '1'); } catch (e) {}
+    renderSearch();
+  }
+  function myCalMove(d) {
+    const [y, m] = _myCalYM.split('-').map(Number), t = new Date(y, m - 1 + d, 1);
+    _myCalYM = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}`; renderSearch();
+  }
+  function myCalPick(ds) { _myCalSel = _myCalSel === ds ? null : ds; renderSearch(); }
+  // 이벤트 줄임말 — 내 달력 그날 정리에서만 쓴다(다른 곳은 원래 이름). 사용자와 정한 규칙 2026-11-11
+  const EV_SHORT = [
+    [/스페셜\s*커튼콜/g, '스콜'], [/커튼콜\s*(촬영\s*)?(위크|데이|WEEK)/g, '컷콜'],
+    [/럭키\s*드로우/g, '럭드'], [/(재관람\s*카드\s*)?(스페셜\s*)?더블\s*적립/g, '덥적'], [/(재관람\s*카드\s*)?트리플\s*적립/g, '트적'],
+    [/페어\s*폴라(로이드)?\s*(증정\s*)?데이/g, '페폴데'], [/폴라(로이드)?\s*(증정\s*)?데이/g, '폴데'],
+    [/셀카\s*포토\s*카드/g, '셀포'], [/포토\s*카드/g, '포카'], [/폴라로이드/g, '폴라'], [/무대\s*인사/g, '무인'],
+    [/하이터치\s*배웅회/g, '배웅회'], [/싱어롱\s*데이|SING-ALONG\s*WEEK/gi, '싱어롱'], [/관객과의\s*대화/g, '관대'], [/전관\s*회차/g, '전관'],
+    [/실황\s*음원\s*뮤직\s*카드/g, '뮤직카드'],
+  ];
+  function evShort(name) {
+    let t = name.includes(' — ') ? name.split(' — ').pop() : name;
+    EV_SHORT.forEach(([re, to]) => { t = t.replace(re, to); });
+    t = t.replace(/(^|\s)(증정|위크|WEEK|데이|DAY|이벤트|수령)(?=\s|$)/g, ' ').replace(/\s+/g, ' ').trim();
+    return t || name;
+  }
+  // 그날 내 일정 — { icon, name, time, cast, ev }
+  function myDayItems(ds) {
+    const works = catalog('all').works;
+    return (getAttended()[ds] || []).filter(r => !r.transferred).map(r => {
+      const w = works.find(x => x.id === r.appId) || {};
+      const s = w.id ? rowsOf(w).find(x => x.date === ds && (x.time || '') === (r.time || '') && (!r.showId || x._showId === r.showId)) : null;
+      return { icon: w.icon || '🎭', name: w.name || '', time: r.time || '', appId: r.appId, showId: r.showId || '',
+        cast: s ? getActorFields(s).map(k => s[k]).filter(Boolean).join(' · ') : '',
+        ev: w.id ? eventsOf(w).filter(e => e.name && evAt(e, ds, r.time)).map(e => evShort(e.name)) : [] };
+    }).concat(getCustom().filter(e => e.date === ds).map(e => ({ icon: '📌', name: e.name || '', time: e.time || '', cast: '', ev: [], customId: e.id })))
+      .sort((a, b) => a.time.localeCompare(b.time));
+  }
+  function myCalBox(w, rows, shown) {
+    const open = (() => { try { return !!localStorage.getItem(MYCAL_KEY); } catch (e) { return false; } })();
+    const btn = `<button class="srch-back mycal-btn" onclick="toggleMyCal()">📅 내 달력 ${open ? '▴' : '▾'}</button>`;
+    if (!open) return btn;
+    const days = new Set(shown.map(r => r.date));
+    if (!_myCalYM) { const nx = shown.map(r => r.date).filter(d => d >= todayStr).sort()[0]; _myCalYM = (nx || todayStr).slice(0, 7); }
+    const [y, m] = _myCalYM.split('-').map(Number);
+    const first = new Date(y, m - 1, 1), lead = (first.getDay() + 6) % 7, last = new Date(y, m, 0).getDate();
+    let cells = '<i></i>'.repeat(lead);
+    for (let d = 1; d <= last; d++) {
+      const ds = `${_myCalYM}-${String(d).padStart(2, '0')}`, dow = new Date(y, m - 1, d).getDay();
+      const mine = myDayItems(ds), icons = mine.slice(0, 2).map(x => x.icon).join('') + (mine.length > 2 ? `<small>+${mine.length - 2}</small>` : '');
+      cells += `<button class="mc-day${days.has(ds) ? '' : ' off'}${ds < todayStr ? ' past' : ''}${ds === todayStr ? ' today' : ''}${ds === _myCalSel ? ' sel' : ''}${dow === 0 ? ' sun' : dow === 6 ? ' sat' : ''}"
+        onclick="myCalPick('${ds}')"><span>${d}</span><b>${icons}</b></button>`;
+    }
+    return btn + `<div class="mycal">
+      <div class="mc-hd"><button onclick="myCalMove(-1)">‹</button><span>${y}년 ${m}월</span><button onclick="myCalMove(1)">›</button></div>
+      <div class="mc-grid">${['월', '화', '수', '목', '금', '토', '일'].map(x => `<em>${x}</em>`).join('')}${cells}</div>
+      ${_myCalSel && _myCalSel.startsWith(_myCalYM) ? myCalDay(w, rows, shown, _myCalSel) : '<div class="mc-hint">날짜를 누르면 그날 내 일정과 이 작품 회차가 보여요</div>'}
+    </div>`;
+  }
+  function myCalDay(w, rows, shown, ds) {
+    const d = new Date(ds + 'T00:00:00'), mine = myDayItems(ds);
+    const sess = shown.filter(r => r.date === ds).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+    const hidden = rows.filter(r => r.date === ds).length - sess.length;
+    return `<div class="mc-day-box">
+      <div class="mc-day-hd">${evMd(ds)}(${DOW[d.getDay()]})</div>
+      <div class="mc-lbl">내 일정</div>
+      ${mine.length ? mine.map(x => `<div class="mc-sess mine" onclick="${x.customId !== undefined ? `openCustomForm('${ds}',${x.customId})` : `openEvSess('${x.appId}','${ds}','${x.time}','${x.showId}',-1)`}">
+          <span class="mc-time">${x.time}</span>
+          <span class="mc-cast">${x.icon} ${x.name}${x.cast ? ` <span class="mc-sub">${x.cast}</span>` : ''}${x.ev.length ? ` <span class="mc-ev">${x.ev.join(' · ')}</span>` : ''}</span>
+        </div>`).join('') : '<div class="mc-none">없음</div>'}
+      <div class="mc-lbl" style="margin-top:6px">이 작품</div>
+      ${sess.map(s => {
+        const ev = eventsOf(w).filter(e => e.name && evAt(e, ds, s.time)).map(e => evShort(e.name));
+        return `<div class="mc-sess" onclick="openEvSess('${w.id}','${ds}','${s.time || ''}','${s._showId || ''}',-1)">
+          <span class="mc-time">${s.time || ''}</span>
+          <span class="mc-cast">${getActorFields(s).map(k => s[k]).filter(Boolean).join(' · ')}${ev.length ? ` <span class="mc-ev">${ev.join(' · ')}</span>` : ''}</span>
+        </div>`;
+      }).join('') || (hidden ? '' : '<div class="mc-none">이 작품 회차 없음</div>')}
+      ${hidden ? `<div class="mc-none">배우 필터로 숨긴 회차 ${hidden}개</div>` : ''}
+      ${sess.length ? `<button class="mc-go" onclick="myCalJump('${ds}')">목록에서 보기 ›</button>` : ''}
+    </div>`;
+  }
+  // 날짜를 누르면 아래 회차 목록에서 그날로 — 지난 날이면 접힌 지난 회차를 그만큼 펼친다
+  function myCalJump(ds) {
+    if (ds < todayStr) {
+      const w = catalog('all').works.find(x => x.id === _srchSel.key);
+      _srchPastOpen = Math.max(_srchPastOpen, rowsOf(w).filter(r => r.date >= ds && r.date < todayStr).length);
+      renderSearch();
+    }
+    const el = document.querySelector(`.srch-row[data-ds="${ds}"]`);
+    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1200); }
+  }
   function pickSearch(type, key) {
-    _srchSel = { type, key }; _srchPastOpen = 0; _srchActors.clear();
+    _srchSel = { type, key }; _srchPastOpen = 0; _srchActors.clear(); _myCalYM = null; _myCalSel = null;
     const q = document.getElementById('srch-q');
     _srchBackQ = q ? q.value : '';   // '‹ 목록'은 들어오기 전 화면으로 — 빈 칸에서 왔으면 전체 목록
     pushRecentQ(_srchBackQ);
@@ -3473,7 +3619,8 @@
         <div class="srch-sub">${[info.venue || ai.venue, period].filter(Boolean).join(' · ')}</div>
         ${links ? `<div class="srch-links">${links}</div>` : ''}
         ${castChips(rows, { roles: info.roles || ai.roles })}
-        ${sessList(rows.filter(castPick(rows, { roles: info.roles || ai.roles })).map(s => ({ w, s })), false)}
+        ${(() => { const shown = rows.filter(castPick(rows, { roles: info.roles || ai.roles }));
+          return myCalBox(w, rows, shown) + sessList(shown.map(s => ({ w, s })), false); })()}
       </div>`;
     };
     // 고른 배우로 회차 거르기 — 같은 배역끼리는 '또는', 다른 배역끼리는 '그리고'.
@@ -3517,13 +3664,13 @@
       const show = past.slice(past.length - nPast).concat(sorted.filter(x => x.s.date >= todayStr));
       const evOn = (w, ds, time) => eventsOf(w).filter(e => evAt(e, ds, time)).map(e => e.name);
       return `<div class="srch-sess">
-        ${past.length ? `<div class="srch-past-btns">${more ? `<button class="srch-back" onclick="_srchPastOpen+=10;renderSearch()">${nPast ? `${Math.min(10, more)}개 더 보기 ▾ <span class="srch-past-n">남은 ${more}</span>` : `지난 회차 ${past.length}개 ▾`}</button>` : ''}${nPast ? `<button class="srch-back" onclick="_srchPastOpen=0;renderSearch()">접기 ▴</button>` : ''}</div>` : ''}
+        ${past.length ? `<div class="srch-past-btns">${more ? `<button class="srch-back" onclick="_srchPastOpen+=10;renderSearch()">${nPast ? `지난 회차 ${more}개 더 보기 <span class="srch-past-n">(${Math.min(10, more)}개)</span> ▾` : `지난 회차 ${past.length}개 ▾`}</button>` : ''}${nPast ? `<button class="srch-back" onclick="_srchPastOpen=0;renderSearch()">접기 ▴</button>` : ''}</div>` : ''}
         ${show.map(({ w, s }) => {
           const r = (att[s.date] || []).find(x => recHit(x, w.id, s));
           const mark = r ? (r.transferred ? '↪ 양도' : s.date < todayStr ? '✓ 관람' : '🎫 예매') : '';
           const ev = evOn(w, s.date, s.time);
           const dow = new Date(s.date + 'T00:00:00').getDay();
-          return `<div class="srch-row" onclick="openEvSess('${w.id}','${s.date}','${s.time || ''}','${s._showId || ''}',-1)">
+          return `<div class="srch-row" data-ds="${s.date}" onclick="openEvSess('${w.id}','${s.date}','${s.time || ''}','${s._showId || ''}',-1)">
             <div class="srch-when">
               <span class="srch-time${dow === 0 ? ' sun' : dow === 6 ? ' sat' : ''}">${when(s)}</span>
               ${mark ? `<span class="srch-mark${r && r.transferred ? ' tr' : ''}">${mark}</span>` : ''}
@@ -4157,7 +4304,7 @@
     renderFrames();
     await migratePhotosToIndexedDB();
     const apps = getApps();
-    if (!apps.length) { refreshStatus(); renderTabs(); renderCalendar(); discoverApps(true).then(syncActorWorks, syncActorWorks); return; }
+    if (!apps.length) { refreshStatus(); renderTabs(); renderCalendar(); discoverApps(true).then(migrateExtraShows).then(syncActorWorks, syncActorWorks); return; }
     // 스케줄 로드 실패를 조용히 삼키지 않는다. 어떤 앱이 안 떴는지 알려준다.
     const failed = [];
     await Promise.all(apps.map(async app => {
@@ -4175,7 +4322,7 @@
     loadEvents(apps);      // 주간 보기에 붙일 특전·이벤트 (백그라운드)
 
     // 새 작품 자동 발견 (백그라운드, 실패해도 조용히) → 관심 배우가 나오는 새 작품을 달력에
-    discoverApps(true).then(syncActorWorks, syncActorWorks);
+    discoverApps(true).then(migrateExtraShows).then(syncActorWorks, syncActorWorks);
   }
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
