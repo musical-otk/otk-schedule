@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
   <title>mu:di</title>
   <link rel="manifest" href="manifest.json">
-  <link rel="apple-touch-icon" href="apple-touch-icon-v3.png">
-  <link rel="icon" type="image/png" href="icon-192-v3.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon-v4.png">
+  <link rel="icon" type="image/png" href="icon-192-v4.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="mu:di">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -124,7 +124,7 @@
     .app-group-caret { font-size: 11px; }
     .preset-date { font-size: 10px; color: var(--text3); margin-right: 6px; flex-shrink: 0; }
 
-    #view-cal { flex: 1; }
+    #view-cal { flex: 1; overflow-x: clip; }   /* 달력이 미끄러질 때 옆으로 스크롤이 생기지 않게 */
     #view-cal.hidden { display: none; }
     /* 찾는 중에는 달력을 숨기고 결과만 */
     #view-cal.searching > :not(#home-search) { display: none !important; }
@@ -712,9 +712,9 @@
       <button class="srch-btn on" onclick="openSearch()">🔍 공연·배우 찾기</button>
     </div>
     <div class="cal-nav">
-      <button class="nav-btn" onclick="changeMonth(-1)">‹</button>
+      <button class="nav-btn" onclick="slideCal(-1)">‹</button>
       <div class="cal-month" id="cal-month-label"></div>
-      <button class="nav-btn" onclick="changeMonth(1)">›</button>
+      <button class="nav-btn" onclick="slideCal(1)">›</button>
     </div>
     <div class="cal-seg">
       <div class="seg-view">
@@ -4213,6 +4213,31 @@
     if (!document.getElementById('home-search').hidden) { closeSearch(); return; }
     if (!document.getElementById('home-hearts').hidden) { closeHearts(); return; }
   });
+
+  // 달력을 옆으로 밀면 ‹ › 와 같다 (월간은 한 달, 주간은 한 주). 세로 스크롤과 헷갈리지 않게 가로로 충분히 밀었을 때만
+  ['cal-grid', 'cal-week'].forEach(id => {
+    const el = document.getElementById(id);
+    let x0 = null, y0 = 0, t0 = 0;
+    el.addEventListener('touchstart', e => {
+      if (e.touches.length !== 1) { x0 = null; return; }
+      x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; t0 = Date.now();
+    }, { passive: true });
+    el.addEventListener('touchend', e => {
+      if (x0 === null) return;
+      const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+      x0 = null;
+      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5 || Date.now() - t0 > 700) return;
+      slideCal(dx < 0 ? 1 : -1);
+    }, { passive: true });
+  });
+  // 넘긴 쪽에서 새 달력이 미끄러져 들어온다. 움직임 줄이기 설정이면 그냥 바꾼다
+  function slideCal(d) {
+    changeMonth(d);
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const el = document.getElementById(getCalView() === 'week' ? 'cal-week' : 'cal-grid');
+    el.animate && el.animate([{ transform: `translateX(${d * 48}px)`, opacity: 0.25 }, { transform: 'none', opacity: 1 }],
+      { duration: 220, easing: 'cubic-bezier(.2,.7,.3,1)' });
+  }
 
   init();
 </script>
