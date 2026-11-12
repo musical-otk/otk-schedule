@@ -300,6 +300,7 @@
     .ev-sess { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-top: 1px solid var(--border); font-size: 13px; }
     .ev-sess-when { flex: none; font-weight: 600; min-width: 92px; }
     .ev-sess-cast { flex: 1; color: var(--text2); font-size: 12px; min-width: 0; }
+    .ev-sess-note { display: block; color: var(--custom); font-size: 11px; margin-top: 2px; }
     .ev-sess.past { opacity: .55; }
     .ev-btn { flex: none; font-size: 12px; padding: 5px 10px; border-radius: 12px; border: 1px solid var(--custom); background: none; color: var(--custom); cursor: pointer; }
     .ev-btn.mine { background: var(--custom); color: #fff; }
@@ -323,6 +324,9 @@
     .seg-view .seg-btn { flex: 0 0 auto; padding: 7px 10px; }
     .seg-view .seg-btn:first-child { border-radius: 9px 0 0 9px; }
     .seg-view .seg-btn:last-child  { border-radius: 0 9px 9px 0; margin-left: -1px; }
+    .seg-view .seg-btn.on { position: relative; z-index: 1; }   /* 겹친 1px 테두리 — 고른 쪽이 위에 (안 그러면 왼쪽을 골랐을 때 세로선이 가려짐) */
+    .set-dow { cursor: default; padding-top: 7px; padding-bottom: 7px; }
+    .set-dow .seg-btn { padding: 5px 12px; font-size: 13px; }
 
     /* ── 주간 보기 — 하루씩 세로로, 회차마다 캐스팅·좌석까지 펼친다 ── */
     #cal-week { padding: 0 12px 88px; }
@@ -775,12 +779,7 @@
     </div>
     <div id="cal-week" hidden></div>
     <div class="cal-grid" id="cal-grid">
-      <div class="cal-dow">
-        <div class="dow-cell">월</div><div class="dow-cell">화</div>
-        <div class="dow-cell">수</div><div class="dow-cell">목</div>
-        <div class="dow-cell">금</div><div class="dow-cell sat">토</div>
-        <div class="dow-cell sun">일</div>
-      </div>
+      <div class="cal-dow" id="cal-dow"></div>
       <div class="cal-days" id="cal-days"></div>
       <div class="axis-legend" id="axis-legend" style="display:none"></div>
     </div>
@@ -935,6 +934,8 @@
       <div id="set-restore"></div>
       <div class="section-title">화면</div>
       <button class="set-btn set-row" onclick="toggleTheme()"><span>다크 / 라이트 모드</span><span id="theme-btn">☀️</span></button>
+      <div class="set-btn set-row set-dow"><span>월간 달력 시작</span><span class="seg-view" id="ws-month"></span></div>
+      <div class="set-btn set-row set-dow"><span>주간 달력 시작</span><span class="seg-view" id="ws-week"></span></div>
       <div class="section-title">요청</div>
       <button class="set-btn" onclick="openRequestForm()">✉️ 작품 추가·정보 수정 요청</button>
       <div class="section-title">기타</div>
@@ -2464,10 +2465,31 @@
   function getCalView() {
     return localStorage.getItem(CAL_VIEW_KEY) === 'week' ? 'week' : 'month';
   }
-  // 주의 첫날 — 월요일 (예전엔 일요일. 이름은 그대로 둔다)
+  // 달력 시작 요일 — 월간·주간 따로, 기본 월요일 (요청 폼 11/12). 기기에 저장, 백업에 포함
+  // '내 일정과 비교' 작은 달력은 월간을 따른다
+  const WS_KEYS = { month: HUB_NS + 'week_start', week: HUB_NS + 'week_start_w' };
+  const sunFirst = (kind = 'month') => localStorage.getItem(WS_KEYS[kind]) === 'sun';
+  const leadOf = (d, kind = 'month') => sunFirst(kind) ? d.getDay() : (d.getDay() + 6) % 7;   // 그 날 앞에 비울 칸 수
+  const dowOrder = (kind = 'month') => sunFirst(kind) ? [0, 1, 2, 3, 4, 5, 6] : [1, 2, 3, 4, 5, 6, 0];
+  function renderDowHead() {
+    const el = document.getElementById('cal-dow');
+    if (el) el.innerHTML = dowOrder().map(i => `<div class="dow-cell${i === 0 ? ' sun' : i === 6 ? ' sat' : ''}">${DOW[i]}</div>`).join('');
+    ['month', 'week'].forEach(kind => {
+      const box = document.getElementById('ws-' + kind);
+      if (box) box.innerHTML = [['mon', '월요일'], ['sun', '일요일']].map(([v, t]) =>
+        `<button class="seg-btn${(v === 'sun') === sunFirst(kind) ? ' on' : ''}" onclick="setWeekStart('${kind}','${v}')">${t}</button>`).join('');
+    });
+  }
+  function setWeekStart(kind, v) {
+    if (v === 'sun') localStorage.setItem(WS_KEYS[kind], 'sun'); else localStorage.removeItem(WS_KEYS[kind]);
+    if (weekStart) weekStart = sundayOf(weekStart);
+    renderDowHead(); renderCalendar();
+    if (!document.getElementById('home-search').hidden) renderSearch();
+  }
+  // 주의 첫날 — 설정에 따라 월요일 또는 일요일 (이름은 옛것 그대로)
   function sundayOf(d) {
     const s = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    s.setDate(s.getDate() - (s.getDay() + 6) % 7);
+    s.setDate(s.getDate() - leadOf(s, 'week'));
     return s;
   }
   function ymd(d) {
@@ -2635,7 +2657,7 @@
     renderCalViewButtons(view);
     if (view === 'week') { renderWeek(); return; }
     document.getElementById('cal-month-label').textContent = `${currentYear}년 ${currentMonth + 1}월`;
-    const first    = (new Date(currentYear, currentMonth, 1).getDay() + 6) % 7;   // 월요일 시작 칸 수
+    const first    = leadOf(new Date(currentYear, currentMonth, 1));   // 1일 앞 빈 칸 수
     const days     = new Date(currentYear, currentMonth + 1, 0).getDate();
     const filter   = getFilter();
     const attended = getAttended();
@@ -2862,7 +2884,7 @@
 
   // ── 설정 ──
   function openSettings() {
-    renderShowDiff(); renderNewWorks(); renderRestoreBox();
+    renderShowDiff(); renderNewWorks(); renderRestoreBox(); renderDowHead();
     document.getElementById('ov-settings').classList.add('open');
     // 버전은 sw.js 의 CACHE_NAME 을 읽는다 — 올릴 때마다 손으로 맞출 일이 없게
     fetch('sw.js', { cache: 'no-cache' }).then(r => r.text())
@@ -2920,10 +2942,18 @@
       const parse = v => Object.fromEntries((v || '').split('|').filter(Boolean).map(x => x.split('=')));
       const added = Object.keys(b.sess).filter(k => !(k in a.sess));
       const gone = Object.keys(a.sess).filter(k => !(k in b.sess) && k.slice(0, 10) >= todayStr);
+      // 이름이 같은 배역 칸(게스트 1~4 등)은 묶어서 견준다 — 칸 순서로 견주면 한 명 빠질 때 뒤가 다 당겨져 전부 바뀐 걸로 보였다(정찬콘 11/13)
       const cast = Object.keys(b.sess).filter(k => k in a.sess && a.sess[k] !== b.sess[k]).map(k => {
-        const o = parse(a.sess[k]), n = parse(b.sess[k]);
-        return { k, t: [...new Set([...Object.keys(o), ...Object.keys(n)])].filter(r => o[r] !== n[r]).map(r => `${lbl(r)} ${o[r] || '-'}→${n[r] || '-'}`).join(', ') };
-      });
+        const o = parse(a.sess[k]), n = parse(b.sess[k]), byLbl = {};
+        [...new Set([...Object.keys(o), ...Object.keys(n)])].forEach(r => (byLbl[lbl(r)] = byLbl[lbl(r)] || []).push(r));
+        return { k, t: Object.entries(byLbl).map(([L, ks]) => {
+          const ov = ks.map(r => o[r]).filter(Boolean), nv = ks.map(r => n[r]).filter(Boolean);
+          const out = ov.filter(x => !nv.includes(x)), inn = nv.filter(x => !ov.includes(x));
+          if (!out.length && !inn.length) return '';
+          if (out.length === 1 && inn.length === 1) return `${L} ${out[0]}→${inn[0]}`;
+          return `${L} ${[...out.map(x => '빠짐 ' + x), ...inn.map(x => '추가 ' + x)].join(' · ')}`;
+        }).filter(Boolean).join(', ') };
+      }).filter(c => c.t);
       const ev = Object.keys(b.ev).filter(k => !(k in a.ev)).map(k => k.split('|')[0]);
       if (added.length || gone.length || cast.length || ev.length) works.push({ id, ...nameOf(id), added, gone, cast, ev });
     });
@@ -2967,6 +2997,8 @@
     // 새 회차가 많으면(오픈 한 번에 수십 회) 날짜를 늘어놓지 않고 기간으로
     const span = arr => { if (arr.length <= 4) return few(arr, md); const d = [...arr].sort(); return `${d[0].slice(5, 10).replace('-', '/')} ~ ${d[d.length - 1].slice(5, 10).replace('-', '/')} · ${arr.length}회차`; };
     const few = (arr, f) => arr.slice(0, 4).map(f).join(' · ') + (arr.length > 4 ? ` 외 ${arr.length - 4}` : '');
+    // 회차마다 나뉜 같은 이벤트는 한 번만 — 몇 회차인지 붙인다
+    const evNames = arr => { const c = {}; arr.forEach(x => { c[x] = (c[x] || 0) + 1; }); return Object.entries(c).map(([n, k]) => k > 1 ? `${n} (${k}회차)` : n); };
     const hearts = getHearts().works;
     const works = [...d.works].sort((a, b) => hearts.includes(b.id) - hearts.includes(a.id));
     box.innerHTML = `<div class="sd-when">${at} 받음${d.first ? ' · 다음부터 바뀐 점을 알려 드려요' : works.length ? '' : ' · 바뀐 점 없음'}</div>` +
@@ -2974,7 +3006,7 @@
         ${w.added.length ? `<div class="sd-line"><span class="sd-tag">새 회차</span>${span(w.added)}</div>` : ''}
         ${w.gone.length ? `<div class="sd-line"><span class="sd-tag">취소</span>${few(w.gone, md)}</div>` : ''}
         ${w.cast.map(c => `<div class="sd-line"><span class="sd-tag">캐스팅</span>${md(c.k)} ${c.t}</div>`).join('')}
-        ${w.ev.length ? `<div class="sd-line"><span class="sd-tag">새 이벤트</span>${few(w.ev, x => x)}</div>` : ''}</div>`).join('');
+        ${w.ev.length ? `<div class="sd-line"><span class="sd-tag">새 이벤트</span>${few(evNames(w.ev), x => x)}</div>` : ''}</div>`).join('');
   }
   // 새로 올라온 작품 — 설정 안에서만. ♡ 하거나 7일 지나면 빠진다
   function renderNewWorks() {
@@ -3579,7 +3611,7 @@
     const days = new Set(shown.map(r => r.date));
     if (!_myCalYM) { const nx = shown.map(r => r.date).filter(d => d >= todayStr).sort()[0]; _myCalYM = (nx || todayStr).slice(0, 7); }
     const [y, m] = _myCalYM.split('-').map(Number);
-    const first = new Date(y, m - 1, 1), lead = (first.getDay() + 6) % 7, last = new Date(y, m, 0).getDate();
+    const first = new Date(y, m - 1, 1), lead = leadOf(first), last = new Date(y, m, 0).getDate();
     let cells = '<i></i>'.repeat(lead);
     for (let d = 1; d <= last; d++) {
       const ds = `${_myCalYM}-${String(d).padStart(2, '0')}`, dow = new Date(y, m - 1, d).getDay();
@@ -3589,7 +3621,7 @@
     }
     return { btn, box: `<div class="mycal">
       <div class="mc-hd"><button onclick="myCalMove(-1)">‹</button><span>${y}년 ${m}월</span><button onclick="myCalMove(1)">›</button></div>
-      <div class="mc-grid">${['월', '화', '수', '목', '금', '토', '일'].map(x => `<em>${x}</em>`).join('')}${cells}</div>
+      <div class="mc-grid">${dowOrder().map(i => `<em>${DOW[i]}</em>`).join('')}${cells}</div>
       ${_myCalSel && _myCalSel.startsWith(_myCalYM) ? myCalDay(w, rows, shown, _myCalSel) : '<div class="mc-hint">날짜를 누르면 그날 내 일정과 이 작품 회차가 보여요</div>'}
     </div>` };
   }
@@ -3664,6 +3696,20 @@
       ${e.description ? `<div class="ev-item-desc">${evDescLines(e.description)}</div>` : ''}
       ${e.url ? `<a class="ev-link" href="${e.url}" target="_blank" rel="noopener">원문 보기 ↗</a>` : ''}
     </div>`;
+  // 같은 이벤트가 회차마다 설명 한 군데만 다를 때(하트비트 책갈피 종류) — 공통 앞뒤와 회차별 부분으로 나눈다.
+  // 앞뒤는 낱말 경계까지 물린다. 다른 부분이 길거나 비면 null (설명을 따로따로 보여 준다)
+  function evSplitDesc(list) {
+    const ds = [...new Set(list.map(e => e.description || ''))];
+    if (ds.length < 2) return null;
+    const cut = /[\s:,(·]/;
+    let a = 0; while (ds.every(d => d[a] === ds[0][a]) && a < ds[0].length) a++;
+    while (a > 0 && !cut.test(ds[0][a - 1])) a--;
+    let z = 0; while (ds.every(d => d[d.length - 1 - z] === ds[0][ds[0].length - 1 - z]) && z < ds[0].length - a) z++;
+    while (z > 0 && !/[\s,()·]/.test(ds[0][ds[0].length - z])) z--;
+    const mid = d => d.slice(a, d.length - z).trim();
+    if (!a || ds.some(d => !mid(d) || mid(d).length > 30)) return null;
+    return { head: ds[0].slice(0, a).trimEnd() + ' 회차마다 다름 (아래)' + ds[0].slice(ds[0].length - z), mid };
+  }
   const evRecOf = (w, s) => (getAttended()[s.date] || []).find(x => recHit(x, w.id, s));
   const evRecBtn = (w, s) => {
     const r = evRecOf(w, s);
@@ -3709,18 +3755,21 @@
     const rows = rowsOf(w).filter(s => list.some(e => evAt(e, s.date, s.time)))
       .filter(s => s.date >= todayStr || evRecOf(w, s))
       .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+    const split = evSplitDesc(list);
     const sess = rows.map(s => {
       const d = new Date(s.date + 'T00:00:00'), past = s.date < todayStr;
+      const own = split && list.find(e => evAt(e, s.date, s.time));
       return `<div class="ev-sess${past ? ' past' : ''}">
         <span class="ev-sess-when">${evMd(s.date)}(${DOW[d.getDay()]}) ${s.time || ''}</span>
-        <span class="ev-sess-cast">${getActorFields(s).map(k => s[k]).filter(Boolean).join(' · ')}</span>
+        <span class="ev-sess-cast">${getActorFields(s).map(k => s[k]).filter(Boolean).join(' · ')}${own ? `<span class="ev-sess-note">${split.mid(own.description || '')}</span>` : ''}</span>
         ${evRecBtn(w, s)}
       </div>`;
     }).join('');
     showEvSheet(`${w.icon ? w.icon + ' ' : ''}${name} · ${w.name}`,
       // 회차마다 나뉜 같은 이벤트는 설명·원문이 같으면 한 번만 — 날짜는 아래 회차 목록이 보여 준다
-      list.filter((e, i) => list.findIndex(x => (x.description || '') === (e.description || '') && (x.url || '') === (e.url || '')) === i)
-        .map(e => evItem(e, rows.length > 0)).join('') + sess +
+      (split ? evItem({ ...list[0], description: split.head }, rows.length > 0)
+        : list.filter((e, i) => list.findIndex(x => (x.description || '') === (e.description || '') && (x.url || '') === (e.url || '')) === i)
+        .map(e => evItem(e, rows.length > 0)).join('')) + sess +
       `<div class="ev-foot"><button class="ev-btn ev-plain" onclick="evToWork('${w.id}')">작품 보기 ›</button></div>`);
     pushRecentQ((document.getElementById('srch-q') || {}).value);
   }
@@ -4557,6 +4606,7 @@
 
   async function init() {
     applyTheme(getTheme());
+    renderDowHead();
     const t = new Date();
     currentYear = t.getFullYear(); currentMonth = t.getMonth();
     syncPresetIcons();
